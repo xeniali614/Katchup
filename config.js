@@ -1,2 +1,2 @@
 const SUPABASE_URL = 'https://nmqlzczhnnznknccctpv.supabase.co';
-const SUPABASE_KEY = 'PASTE_YOUR_ANON_KEY_HERE';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tcWx6Y3pobm56bmtuY2NjdHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MjY3OTUsImV4cCI6MjA4NzIwMjc5NX0.372zQMRRDDRqaNAojOyomkHhQpi1Co-y8Qkba93hyRw';
