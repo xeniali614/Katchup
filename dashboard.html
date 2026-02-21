@@ -7,6 +7,117 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <style>
+        .dashboard-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+
+        .profile-sidebar {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 30px;
+            margin-left: 30px;
+            margin-top: 20px;
+        }
+
+        .profile-picture-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .profile-picture-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            border: 3px solid #007bff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-picture {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .change-picture-btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .change-picture-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .change-picture-btn:active {
+            transform: scale(0.98);
+        }
+
+        .group-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-left: 20px;
+        }
+
+        .group-name {
+            font-size: 60px;
+            font-weight: bold;
+            color: #333;
+            margin-left: 40px;
+            margin-top: -30px;
+        }
+
+        .group-description {
+            font-size: 14px;
+            color: #666;
+            max-width: 250px;
+        }
+
+        .file-input-hidden {
+            display: none;
+        }
+
+        .dashboard-content {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .profile-sidebar {
+                flex: 0 0 auto;
+                flex-direction: column;
+                margin-left: 0;
+            }
+
+            .profile-picture-section {
+                width: 100%;
+            }
+
+            .dashboard-content {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation -->
@@ -46,12 +157,65 @@
     <section class="dashboard">
         <div class="container">
             <h2>Welcome to Your Dashboard</h2>
-            <p>Here you can manage your events, view your groups, and stay connected with your friends.</p>
-            <!-- Add dashboard content here -->
+            <div class="dashboard-container">
+                <!-- Profile Sidebar -->
+                <div class="profile-sidebar">
+                    <div class="profile-picture-section">
+                        <div class="profile-picture-container">
+                            <img id="profileImage" class="profile-picture" src="assets/default-profile.png" alt="Profile Picture">
+                        </div>
+                        <button class="change-picture-btn" id="changePictureBtn">Change Picture</button>
+                        <input type="file" id="fileInput" class="file-input-hidden" accept="image/*">
+                    </div>
+                    <div class="group-info">
+                        <div class="group-name">Group Name</div>
+                    </div>
+                </div>
+
+                <!-- Main Dashboard Content -->
+                <div class="dashboard-content">
+                    <!-- Add more dashboard content here -->
+                </div>
+            </div>
         </div>
     </section>
 
     <script src="script.js"></script>
+    <script>
+        // Profile picture functionality
+        const changePictureBtn = document.getElementById('changePictureBtn');
+        const fileInput = document.getElementById('fileInput');
+        const profileImage = document.getElementById('profileImage');
 
+        // Load saved profile picture from localStorage
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedProfilePicture = localStorage.getItem('profilePicture');
+            if (savedProfilePicture) {
+                profileImage.src = savedProfilePicture;
+            }
+        });
+
+        // Handle change picture button click
+        changePictureBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        // Handle file input change
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    profileImage.src = imageData;
+                    // Save to localStorage
+                    localStorage.setItem('profilePicture', imageData);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please select a valid image file.');
+            }
+        });
+    </script>
 </body>
 </html>
