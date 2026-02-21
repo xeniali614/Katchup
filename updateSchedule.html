@@ -48,15 +48,48 @@
         </div>
 
         <div class="meet-grid">
-            <section class="meet-card">
-                <h3>Create a When-to-Meet Poll</h3>
-                <form id="pollForm" class="meet-form">
-                    <div class="form-group">
-                        <label for="pollGroup">Select Group</label>
-                        <select id="pollGroup" required>
-                            <option value="" disabled selected>Select a group...</option>
-                        </select>
+            <section class="meet-card meet-card-wide">
+                <h3>Step 1: Add Your Availability</h3>
+                <div class="meet-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="availabilityGroup">Select Group</label>
+                            <select id="availabilityGroup" required>
+                                <option value="" disabled selected>Select a group...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="availabilityWeek">Week Of (Monday)</label>
+                            <input type="date" id="availabilityWeek" required>
+                        </div>
                     </div>
+                    <div class="availability-grid" id="availabilityGrid"></div>
+                    <div class="meet-actions">
+                        <button id="saveAvailabilityBtn" class="btn-primary" type="button">Save Availability</button>
+                        <button id="clearAvailabilityBtn" class="btn-secondary" type="button">Clear Selection</button>
+                    </div>
+                </div>
+                <div id="availabilityMessage" class="message"></div>
+            </section>
+        </div>
+
+        <div class="meet-grid">
+            <section class="meet-card">
+                <h3>Step 2: Polls</h3>
+                <div id="pollGate" class="alert warning">
+                    <p>Add at least one availability slot to unlock polls.</p>
+                </div>
+                <div class="meet-list">
+                    <h4>Open Polls</h4>
+                    <div id="pollsList" class="meet-list-body"></div>
+                </div>
+                <div class="form-group">
+                    <label for="pollSelect">Select Poll</label>
+                    <select id="pollSelect" required>
+                        <option value="" disabled selected>Select a poll...</option>
+                    </select>
+                </div>
+                <form id="pollForm" class="meet-form">
                     <div class="form-group">
                         <label for="pollTitle">Poll Title</label>
                         <input type="text" id="pollTitle" placeholder="Weekend hangout" required>
@@ -81,43 +114,11 @@
             </section>
 
             <section class="meet-card">
-                <h3>Add Your Availability</h3>
-                <form id="availabilityForm" class="meet-form">
-                    <div class="form-group">
-                        <label for="pollSelect">Select Poll</label>
-                        <select id="pollSelect" required>
-                            <option value="" disabled selected>Select a poll...</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="availDate">Date</label>
-                            <input type="date" id="availDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="availStart">Start Time</label>
-                            <input type="time" id="availStart" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="availEnd">End Time</label>
-                            <input type="time" id="availEnd" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn-secondary">Add Availability</button>
-                </form>
+                <h3>Best Overlap</h3>
+                <p class="meet-hint">Suggestions use group availability and your Google Calendar.</p>
                 <div class="meet-actions">
                     <button id="suggestBtn" class="btn-primary" type="button">Suggest Times</button>
                 </div>
-                <div id="availabilityMessage" class="message"></div>
-                <div class="meet-list">
-                    <h4>Availability in This Poll</h4>
-                    <div id="availabilityList" class="meet-list-body"></div>
-                </div>
-            </section>
-
-            <section class="meet-card">
-                <h3>Best Overlap</h3>
-                <p class="meet-hint">Suggestions use group availability and your Google Calendar.</p>
                 <div id="suggestionsList" class="meet-list-body"></div>
             </section>
         </div>
@@ -130,18 +131,25 @@
             ? 'http://localhost:3001'
             : 'https://katchup-calendar-backend.onrender.com';
 
+        const availabilityGroup = document.getElementById('availabilityGroup');
+        const availabilityWeek = document.getElementById('availabilityWeek');
+        const availabilityGrid = document.getElementById('availabilityGrid');
+        const saveAvailabilityBtn = document.getElementById('saveAvailabilityBtn');
+        const clearAvailabilityBtn = document.getElementById('clearAvailabilityBtn');
+        const availabilityMessage = document.getElementById('availabilityMessage');
+
         const pollForm = document.getElementById('pollForm');
-        const availabilityForm = document.getElementById('availabilityForm');
-        const pollGroup = document.getElementById('pollGroup');
         const pollSelect = document.getElementById('pollSelect');
         const pollMessage = document.getElementById('pollMessage');
-        const availabilityMessage = document.getElementById('availabilityMessage');
-        const availabilityList = document.getElementById('availabilityList');
-        const suggestionsList = document.getElementById('suggestionsList');
+        const pollsList = document.getElementById('pollsList');
+        const pollGate = document.getElementById('pollGate');
         const suggestBtn = document.getElementById('suggestBtn');
+        const suggestionsList = document.getElementById('suggestionsList');
 
         let currentUser = null;
         let pollsCache = {};
+        let selectedSlots = new Set();
+        let pollsLocked = true;
 
         async function getCurrentUser() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -161,6 +169,85 @@
             el.style.display = 'none';
         }
 
+        function toIsoDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function getMonday(date) {
+            const copy = new Date(date);
+            const day = copy.getDay();
+            const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+            copy.setDate(diff);
+            copy.setHours(0, 0, 0, 0);
+            return copy;
+        }
+
+        function getWeekRange() {
+            const selected = availabilityWeek.value
+                ? new Date(`${availabilityWeek.value}T00:00:00`)
+                : new Date();
+            const weekStart = getMonday(selected);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 7);
+            return { weekStart, weekEnd };
+        }
+
+        function slotKey(dayIndex, hour) {
+            return `${dayIndex}-${hour}`;
+        }
+
+        function buildAvailabilityGrid() {
+            availabilityGrid.innerHTML = '';
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+            const corner = document.createElement('div');
+            corner.className = 'availability-cell availability-corner';
+            availabilityGrid.appendChild(corner);
+
+            days.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'availability-cell availability-day';
+                header.textContent = day;
+                availabilityGrid.appendChild(header);
+            });
+
+            for (let hour = 0; hour < 24; hour += 1) {
+                const label = document.createElement('div');
+                label.className = 'availability-cell availability-time';
+                label.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                availabilityGrid.appendChild(label);
+
+                for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                    const cell = document.createElement('button');
+                    cell.type = 'button';
+                    cell.className = 'availability-cell availability-slot';
+                    cell.dataset.day = dayIndex.toString();
+                    cell.dataset.hour = hour.toString();
+                    cell.addEventListener('click', () => {
+                        const key = slotKey(dayIndex, hour);
+                        if (selectedSlots.has(key)) {
+                            selectedSlots.delete(key);
+                        } else {
+                            selectedSlots.add(key);
+                        }
+                        updateGridSelection();
+                    });
+                    availabilityGrid.appendChild(cell);
+                }
+            }
+        }
+
+        function updateGridSelection() {
+            availabilityGrid.querySelectorAll('.availability-slot').forEach(cell => {
+                const key = slotKey(parseInt(cell.dataset.day, 10), parseInt(cell.dataset.hour, 10));
+                if (selectedSlots.has(key)) {
+                    cell.classList.add('selected');
+                } else {
+                    cell.classList.remove('selected');
+                }
+            });
+        }
+
         async function loadGroups() {
             if (!currentUser) {
                 return;
@@ -172,7 +259,7 @@
                 .eq('user_id', currentUser.id);
 
             if (error || !memberData || memberData.length === 0) {
-                pollGroup.innerHTML = '<option value="">No groups yet</option>';
+                availabilityGroup.innerHTML = '<option value="">No groups yet</option>';
                 return;
             }
 
@@ -180,12 +267,82 @@
             memberData.forEach(member => {
                 options += `<option value="${member.groups.id}">${member.groups.name}</option>`;
             });
-            pollGroup.innerHTML = options;
+            availabilityGroup.innerHTML = options;
+        }
+
+        async function loadAvailabilityForWeek() {
+            selectedSlots = new Set();
+            updateGridSelection();
+
+            if (!currentUser || !availabilityGroup.value) {
+                return;
+            }
+
+            const { weekStart, weekEnd } = getWeekRange();
+            const { data, error } = await supabaseClient
+                .from('meet_availability')
+                .select('start_time')
+                .eq('group_id', availabilityGroup.value)
+                .eq('user_id', currentUser.id)
+                .gte('start_time', weekStart.toISOString())
+                .lt('start_time', weekEnd.toISOString());
+
+            if (error || !data) {
+                return;
+            }
+
+            data.forEach(slot => {
+                const start = new Date(slot.start_time);
+                const dayIndex = Math.floor((start - weekStart) / (24 * 60 * 60 * 1000));
+                const hour = start.getHours();
+                if (dayIndex >= 0 && dayIndex < 7) {
+                    selectedSlots.add(slotKey(dayIndex, hour));
+                }
+            });
+
+            updateGridSelection();
+        }
+
+        async function checkAvailabilityGate() {
+            if (!currentUser || !availabilityGroup.value) {
+                setPollsLocked(true);
+                return;
+            }
+
+            const { count, error } = await supabaseClient
+                .from('meet_availability')
+                .select('id', { count: 'exact', head: true })
+                .eq('group_id', availabilityGroup.value)
+                .eq('user_id', currentUser.id);
+
+            if (error) {
+                setPollsLocked(true);
+                return;
+            }
+
+            setPollsLocked(!count || count === 0);
+        }
+
+        function setPollsLocked(locked) {
+            pollsLocked = locked;
+            pollGate.style.display = locked ? 'block' : 'none';
+
+            pollForm.querySelectorAll('input, button').forEach(el => {
+                el.disabled = locked;
+            });
+
+            pollSelect.disabled = locked;
+            suggestBtn.disabled = locked;
+
+            if (locked) {
+                pollsList.innerHTML = '<p class="empty-state">Add availability to view polls.</p>';
+                pollSelect.innerHTML = '<option value="" disabled selected>Select a poll...</option>';
+                suggestionsList.innerHTML = '<p class="empty-state">Add availability to unlock suggestions.</p>';
+            }
         }
 
         async function loadPolls(groupId) {
-            if (!groupId) {
-                pollSelect.innerHTML = '<option value="" disabled selected>Select a poll...</option>';
+            if (!groupId || pollsLocked) {
                 return;
             }
 
@@ -197,56 +354,36 @@
 
             if (error) {
                 pollSelect.innerHTML = '<option value="">Error loading polls</option>';
+                pollsList.innerHTML = '<p class="empty-state">Error loading polls.</p>';
                 return;
             }
 
             pollsCache = {};
             let options = '<option value="" disabled selected>Select a poll...</option>';
+            if (!polls || polls.length === 0) {
+                pollsList.innerHTML = '<p class="empty-state">No polls yet. Create one!</p>';
+            } else {
+                pollsList.innerHTML = polls.map(poll => {
+                    pollsCache[poll.id] = poll;
+                    const owner = poll.created_by === currentUser?.id ? 'You' : 'Member';
+                    return `
+                        <div class="meet-slot">
+                            <div>
+                                <strong>${poll.title}</strong><br>
+                                ${poll.start_date} to ${poll.end_date}
+                            </div>
+                            <span class="meet-badge">${owner}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
             (polls || []).forEach(poll => {
                 pollsCache[poll.id] = poll;
                 options += `<option value="${poll.id}">${poll.title}</option>`;
             });
 
             pollSelect.innerHTML = options;
-        }
-
-        async function loadAvailability(pollId) {
-            availabilityList.innerHTML = '';
-            suggestionsList.innerHTML = '';
-
-            if (!pollId) {
-                availabilityList.innerHTML = '<p class="empty-state">Select a poll to view availability.</p>';
-                return;
-            }
-
-            const { data: availability, error } = await supabaseClient
-                .from('meet_availability')
-                .select('id, user_id, start_time, end_time')
-                .eq('poll_id', pollId)
-                .order('start_time', { ascending: true });
-
-            if (error) {
-                availabilityList.innerHTML = '<p class="empty-state">Error loading availability.</p>';
-                return;
-            }
-
-            if (!availability || availability.length === 0) {
-                availabilityList.innerHTML = '<p class="empty-state">No availability added yet.</p>';
-                return;
-            }
-
-            availabilityList.innerHTML = availability.map(slot => {
-                const start = new Date(slot.start_time);
-                const end = new Date(slot.end_time);
-                const owner = slot.user_id === currentUser?.id ? 'You' : 'Member';
-                return `
-                    <div class="meet-slot">
-                        <div>${start.toLocaleString()}</div>
-                        <div>${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <span class="meet-badge">${owner}</span>
-                    </div>
-                `;
-            }).join('');
         }
 
         async function getGroupMemberCount(groupId) {
@@ -301,10 +438,15 @@
                 return;
             }
 
+            const rangeStart = new Date(`${poll.start_date}T00:00:00`);
+            const rangeEnd = new Date(`${poll.end_date}T23:59:59`);
+
             const { data: availability, error } = await supabaseClient
                 .from('meet_availability')
                 .select('user_id, start_time, end_time')
-                .eq('poll_id', pollId);
+                .eq('group_id', poll.group_id)
+                .gte('start_time', rangeStart.toISOString())
+                .lte('start_time', rangeEnd.toISOString());
 
             if (error || !availability || availability.length === 0) {
                 suggestionsList.innerHTML = '<p class="empty-state">No availability to compare yet.</p>';
@@ -358,14 +500,61 @@
             }).join('');
         }
 
-        pollGroup.addEventListener('change', () => {
-            loadPolls(pollGroup.value);
-        });
-
-        pollSelect.addEventListener('change', () => {
+        async function saveAvailability() {
             clearMessage(availabilityMessage);
-            loadAvailability(pollSelect.value);
-        });
+
+            if (!currentUser) {
+                showMessage(availabilityMessage, 'Please log in to save availability.', 'error');
+                return;
+            }
+
+            if (!availabilityGroup.value) {
+                showMessage(availabilityMessage, 'Please select a group.', 'error');
+                return;
+            }
+
+            if (selectedSlots.size === 0) {
+                showMessage(availabilityMessage, 'Select at least one slot.', 'error');
+                return;
+            }
+
+            const { weekStart, weekEnd } = getWeekRange();
+            const slots = Array.from(selectedSlots).map(key => {
+                const [dayIndex, hour] = key.split('-').map(Number);
+                const start = new Date(weekStart);
+                start.setDate(start.getDate() + dayIndex);
+                start.setHours(hour, 0, 0, 0);
+                const end = new Date(start);
+                end.setHours(end.getHours() + 1);
+                return {
+                    group_id: availabilityGroup.value,
+                    user_id: currentUser.id,
+                    start_time: start.toISOString(),
+                    end_time: end.toISOString()
+                };
+            });
+
+            await supabaseClient
+                .from('meet_availability')
+                .delete()
+                .eq('group_id', availabilityGroup.value)
+                .eq('user_id', currentUser.id)
+                .gte('start_time', weekStart.toISOString())
+                .lt('start_time', weekEnd.toISOString());
+
+            const { error } = await supabaseClient
+                .from('meet_availability')
+                .insert(slots);
+
+            if (error) {
+                showMessage(availabilityMessage, 'Failed to save availability.', 'error');
+                return;
+            }
+
+            showMessage(availabilityMessage, 'Availability saved!', 'success');
+            await checkAvailabilityGate();
+            await loadPolls(availabilityGroup.value);
+        }
 
         pollForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -376,13 +565,17 @@
                 return;
             }
 
-            const groupId = pollGroup.value;
+            if (!availabilityGroup.value) {
+                showMessage(pollMessage, 'Please select a group first.', 'error');
+                return;
+            }
+
             const title = document.getElementById('pollTitle').value.trim();
             const startDate = document.getElementById('pollStart').value;
             const endDate = document.getElementById('pollEnd').value;
             const duration = parseInt(document.getElementById('pollDuration').value, 10);
 
-            if (!groupId || !title || !startDate || !endDate || !duration) {
+            if (!title || !startDate || !endDate || !duration) {
                 showMessage(pollMessage, 'Please fill out all poll fields.', 'error');
                 return;
             }
@@ -391,7 +584,7 @@
                 .from('meet_polls')
                 .insert([
                     {
-                        group_id: groupId,
+                        group_id: availabilityGroup.value,
                         created_by: currentUser.id,
                         title,
                         start_date: startDate,
@@ -407,62 +600,33 @@
 
             showMessage(pollMessage, 'Poll created!', 'success');
             pollForm.reset();
-            await loadPolls(groupId);
+            await loadPolls(availabilityGroup.value);
         });
 
-        availabilityForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        availabilityGroup.addEventListener('change', async () => {
             clearMessage(availabilityMessage);
-
-            if (!currentUser) {
-                showMessage(availabilityMessage, 'Please log in to add availability.', 'error');
-                return;
-            }
-
-            const pollId = pollSelect.value;
-            const date = document.getElementById('availDate').value;
-            const startTime = document.getElementById('availStart').value;
-            const endTime = document.getElementById('availEnd').value;
-
-            if (!pollId || !date || !startTime || !endTime) {
-                showMessage(availabilityMessage, 'Please fill out all availability fields.', 'error');
-                return;
-            }
-
-            const start = new Date(`${date}T${startTime}`);
-            const end = new Date(`${date}T${endTime}`);
-
-            if (end <= start) {
-                showMessage(availabilityMessage, 'End time must be after start time.', 'error');
-                return;
-            }
-
-            const { error } = await supabaseClient
-                .from('meet_availability')
-                .insert([
-                    {
-                        poll_id: pollId,
-                        user_id: currentUser.id,
-                        start_time: start.toISOString(),
-                        end_time: end.toISOString()
-                    }
-                ]);
-
-            if (error) {
-                showMessage(availabilityMessage, 'Failed to save availability.', 'error');
-                return;
-            }
-
-            showMessage(availabilityMessage, 'Availability saved!', 'success');
-            availabilityForm.reset();
-            await loadAvailability(pollId);
+            await checkAvailabilityGate();
+            await loadAvailabilityForWeek();
+            await loadPolls(availabilityGroup.value);
         });
 
+        availabilityWeek.addEventListener('change', loadAvailabilityForWeek);
+
+        clearAvailabilityBtn.addEventListener('click', () => {
+            selectedSlots = new Set();
+            updateGridSelection();
+        });
+
+        saveAvailabilityBtn.addEventListener('click', saveAvailability);
         suggestBtn.addEventListener('click', suggestTimes);
 
         document.addEventListener('DOMContentLoaded', async () => {
+            const { weekStart } = getWeekRange();
+            availabilityWeek.value = toIsoDate(weekStart);
+            buildAvailabilityGrid();
             await getCurrentUser();
             await loadGroups();
+            setPollsLocked(true);
         });
     </script>
 </body>

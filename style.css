@@ -1601,3 +1601,49 @@ body {
     font-size: 0.9rem;
     font-weight: 600;
 }
+
+.meet-card-wide {
+    grid-column: 1 / -1;
+}
+
+.availability-grid {
+    display: grid;
+    grid-template-columns: 90px repeat(7, 1fr);
+    border: 2px solid var(--border-color);
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.availability-cell {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.35rem;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.availability-day {
+    background-color: #C4E3B5;
+    font-weight: 800;
+}
+
+.availability-time {
+    background-color: #F2E7CF;
+    font-weight: 700;
+}
+
+.availability-slot {
+    background-color: #fff;
+    cursor: pointer;
+    min-height: 28px;
+    border: 1px solid var(--border-color);
+}
+
+.availability-slot.selected {
+    background-color: var(--accent-green);
+}
+
+.availability-corner {
+    background-color: #F2E7CF;
+    font-weight: 800;
+}
