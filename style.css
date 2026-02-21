@@ -1963,3 +1963,33 @@ body {
     margin: 0;
     font-weight: 500;
 }
+
+/* Notifications Styles */
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    background-color: white;
+    border-left: 4px solid var(--primary-color);
+    padding: 12px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.notification-message {
+    margin: 0 0 5px 0;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.notification-time {
+    margin: 0;
+    font-size: 12px;
+    color: #999;
+}

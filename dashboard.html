@@ -174,7 +174,6 @@
                         </div>
                         <button class="change-picture-btn" id="changePictureBtn">Change Picture</button>
                         <input type="file" id="fileInput" class="file-input-hidden" accept="image/*">
-                        <h1>Notifications: </h1>
                     </div>
                     <div class="group-info">
                         <div class="group-name">Group Name</div>
@@ -183,7 +182,10 @@
 
                 <!-- Main Dashboard Content -->
                 <div class="dashboard-content">
-                    <!-- Add more dashboard content here -->
+                    <h3>Notifications</h3>
+                    <div id="notificationsList" class="notifications-list">
+                        <p class="empty-state">No new notifications</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -191,6 +193,112 @@
 
     <script src="script.js"></script>
     <script>
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const notificationsList = document.getElementById('notificationsList');
+
+        // Load and display notifications
+        async function loadNotifications() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    notificationsList.innerHTML = '<p class="empty-state">Please log in</p>';
+                    return;
+                }
+
+                console.log('Current user:', user.id);
+
+                // Get user's groups
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id')
+                    .eq('user_id', user.id);
+
+                console.log('User groups:', memberData);
+
+                if (!memberData || memberData.length === 0) {
+                    notificationsList.innerHTML = '<p class="empty-state">No group notifications</p>';
+                    return;
+                }
+
+                const groupIds = memberData.map(m => m.group_id);
+                console.log('Group IDs:', groupIds);
+
+                // Fetch notifications for user's groups, excluding their own
+                const { data: notifications, error } = await supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .in('group_id', groupIds)
+                    .eq('recipient_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                console.log('Notifications query error:', error);
+                console.log('Notifications data:', notifications);
+
+                if (error) {
+                    console.error('Error loading notifications:', error);
+                    notificationsList.innerHTML = '<p class="empty-state">Error loading notifications: ' + error.message + '</p>';
+                    return;
+                }
+
+                if (!notifications || notifications.length === 0) {
+                    notificationsList.innerHTML = '<p class="empty-state">No new notifications</p>';
+                    return;
+                }
+
+                // Get user data for display
+                const userIds = [...new Set(notifications.map(n => n.user_id))];
+                
+                // Try to get user names - adjust based on your actual users table structure
+                let userMap = {};
+                try {
+                    const { data: users } = await supabaseClient
+                        .from('users')
+                        .select('id, name')
+                        .in('id', userIds);
+
+                    if (users) {
+                        users.forEach(u => userMap[u.id] = u.name);
+                    }
+                } catch (e) {
+                    console.log('Users table not found, using generic names');
+                }
+
+                let html = '';
+                for (let notif of notifications) {
+                    const userName = userMap[notif.user_id] || 'A friend';
+                    let message = '';
+
+                    if (notif.type === 'photos_uploaded') {
+                        message = `${userName} finished their weekly photo upload!`;
+                    } else if (notif.type === 'letter_written') {
+                        message = `${userName} wrote a new letter: "${notif.letter_title || 'Letter'}"`;
+                    }
+
+                    const timestamp = new Date(notif.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    html += `
+                        <div class="notification-item">
+                            <p class="notification-message">${message}</p>
+                            <p class="notification-time">${timestamp}</p>
+                        </div>
+                    `;
+                }
+
+                notificationsList.innerHTML = html;
+                console.log('Notifications displayed:', html.length > 0);
+            } catch (error) {
+                console.error('Error in loadNotifications:', error);
+                notificationsList.innerHTML = '<p class="empty-state">Error loading notifications: ' + error.message + '</p>';
+            }
+        }
+
         // Profile picture functionality
         const changePictureBtn = document.getElementById('changePictureBtn');
         const fileInput = document.getElementById('fileInput');
@@ -202,6 +310,7 @@
             if (savedProfilePicture) {
                 profileImage.src = savedProfilePicture;
             }
+            loadNotifications();
         });
 
         // Handle change picture button click
@@ -225,6 +334,9 @@
                 alert('Please select a valid image file.');
             }
         });
+
+        // Refresh notifications every 30 seconds
+        setInterval(loadNotifications, 30000);
     </script>
 </body>
 </html>

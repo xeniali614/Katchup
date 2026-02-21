@@ -218,6 +218,40 @@
                     return;
                 }
 
+                // Create notification for group members
+                const { data: groupMembers } = await supabaseClient
+                    .from('group_members')
+                    .select('user_id')
+                    .eq('group_id', groupId);
+
+                if (groupMembers && groupMembers.length > 0) {
+                    const notificationPromises = groupMembers
+                        .filter(m => m.user_id !== user.id)
+                        .map(m => supabaseClient
+                            .from('notifications')
+                            .insert([
+                                {
+                                    user_id: user.id,
+                                    group_id: groupId,
+                                    recipient_id: m.user_id,
+                                    type: 'letter_written',
+                                    letter_title: title,
+                                    created_at: new Date().toISOString()
+                                }
+                            ])
+                        );
+
+                    const results = await Promise.all(notificationPromises);
+                    console.log('Letter notification creation results:', results);
+                    
+                    // Check for errors in results
+                    for (let i = 0; i < results.length; i++) {
+                        if (results[i].error) {
+                            console.error('Letter notification error:', results[i].error);
+                        }
+                    }
+                }
+
                 letterForm.reset();
                 letterMessage.textContent = 'Letter saved.';
                 letterMessage.className = 'message success';
