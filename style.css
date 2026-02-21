@@ -1529,3 +1529,75 @@ body {
     font-size: 12px;
     color: #999;
 }
+
+/* When-to-Meet styles */
+.meet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.meet-card {
+    background-color: #F2E7CF;
+    border: 4px solid var(--border-color);
+    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    padding: 1.5rem;
+}
+
+.meet-card h3 {
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--text-dark);
+}
+
+.meet-form .form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.meet-form .form-row .form-group {
+    flex: 1 1 140px;
+}
+
+.meet-actions {
+    margin-top: 1rem;
+}
+
+.meet-list {
+    margin-top: 1rem;
+}
+
+.meet-list-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.meet-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background-color: #fff;
+    border: 2px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+}
+
+.meet-badge {
+    background-color: var(--accent-blue);
+    border: 2px solid var(--border-color);
+    color: var(--text-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+}
+
+.meet-hint {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
