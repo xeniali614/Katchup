@@ -294,6 +294,21 @@
                     const group = member.groups;
                     const isCreator = group.creator_id === user.id;
                     
+                    // Get group members
+                    const { data: groupMembers } = await supabaseClient
+                        .from('group_members')
+                        .select('user_id, profiles(username)')
+                        .eq('group_id', group.id);
+
+                    let membersHtml = '';
+                    if (groupMembers && groupMembers.length > 0) {
+                        membersHtml = '<div class="group-members"><strong>Members:</strong><ul>';
+                        for (let gm of groupMembers) {
+                            membersHtml += `<li>${gm.profiles?.username || 'Unknown'}</li>`;
+                        }
+                        membersHtml += '</ul></div>';
+                    }
+                    
                     html += `
                         <div class="group-card">
                             <div class="group-header">
@@ -303,6 +318,10 @@
                             <div class="group-content">
                                 <p>Invite Code: <strong>${group.invite_code}</strong></p>
                                 <button class="btn-copy" onclick="copyToClipboard('${group.invite_code}')">Copy Code</button>
+                                ${membersHtml}
+                                <div class="group-actions">
+                                    ${isCreator ? `<button class="btn-danger" onclick="deleteGroup('${group.id}', '${group.name}')">Delete Group</button>` : ''}
+                                </div>
                             </div>
                         </div>
                     `;
@@ -311,6 +330,43 @@
             } catch (error) {
                 console.error('Error loading groups:', error);
                 groupsList.innerHTML = '<p class="empty-state">Error loading groups</p>';
+            }
+        }
+
+        // Delete group
+        async function deleteGroup(groupId, groupName) {
+            if (!confirm(`Are you sure you want to delete "${groupName}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                // Delete all members first
+                const { error: deleteMembersError } = await supabaseClient
+                    .from('group_members')
+                    .delete()
+                    .eq('group_id', groupId);
+
+                if (deleteMembersError) {
+                    alert('Error deleting group members');
+                    return;
+                }
+
+                // Delete the group
+                const { error: deleteGroupError } = await supabaseClient
+                    .from('groups')
+                    .delete()
+                    .eq('id', groupId);
+
+                if (deleteGroupError) {
+                    alert('Error deleting group');
+                    return;
+                }
+
+                alert(`"${groupName}" has been deleted successfully`);
+                loadGroups();
+            } catch (error) {
+                console.error('Error deleting group:', error);
+                alert('An error occurred while deleting the group');
             }
         }
 

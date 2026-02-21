@@ -864,6 +864,59 @@ body {
     background-color: #4f46e5;
 }
 
+.group-members {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.group-members strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+.group-members ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.group-members li {
+    padding: 0.25rem 0;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.group-members li:before {
+    content: "👤 ";
+    margin-right: 0.5rem;
+}
+
+.group-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-danger {
+    padding: 0.5rem 1rem;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
 @media (max-width: 768px) {
     .groups-tabs {
         flex-direction: column;
