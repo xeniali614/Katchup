@@ -4,6 +4,7 @@
   "description": "1. In `backend/.env`, set Google + Supabase keys and keep these local URLs:\r    - `GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback`\r    - `FRONTEND_ORIGIN=http://localhost:3000`\r    - `FRONTEND_REDIRECT=http://localhost:3000/schedule.html`\r 2. Start backend:\r    - `cd backend`\r    - `npm install`\r    - `npm run dev`\r 3. Open `http://localhost:3000/schedule.html`.",
   "main": "config.js",
   "scripts": {
+    "start": "live-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
