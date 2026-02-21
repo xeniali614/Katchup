@@ -254,15 +254,6 @@
 
                     // Create notification ONLY if this upload brings them to 3+ for the FIRST time
                     if (previousPhotos < 3 && totalPhotos >= 3) {
-                        // Fetch user's username
-                        const { data: userData } = await supabaseClient
-                            .from('users')
-                            .select('username')
-                            .eq('id', user.id)
-                            .single();
-
-                        const username = userData?.username || user.email;
-
                         const { data: groupMembers } = await supabaseClient
                             .from('group_members')
                             .select('user_id')
@@ -276,7 +267,6 @@
                                     .insert([
                                         {
                                             user_id: user.id,
-                                            username: username,
                                             group_id: groupId,
                                             recipient_id: m.user_id,
                                             type: 'photos_uploaded',
