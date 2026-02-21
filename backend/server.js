@@ -4,11 +4,16 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendRoot = path.resolve(__dirname, '..');
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -35,6 +40,28 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+app.use(express.static(frontendRoot));
+
+function getFrontendRedirectUrl(req) {
+  const configuredRedirect = process.env.FRONTEND_REDIRECT;
+
+  if (!configuredRedirect) {
+    return `${req.protocol}://${req.get('host')}/schedule.html`;
+  }
+
+  try {
+    const configuredUrl = new URL(configuredRedirect);
+    if (configuredUrl.hostname === 'localhost' && configuredUrl.port === '8000') {
+      return `${req.protocol}://${req.get('host')}${configuredUrl.pathname}${configuredUrl.search}${configuredUrl.hash}`;
+    }
+    return configuredUrl.toString();
+  } catch {
+    if (configuredRedirect.startsWith('/')) {
+      return `${req.protocol}://${req.get('host')}${configuredRedirect}`;
+    }
+    return `${req.protocol}://${req.get('host')}/schedule.html`;
+  }
+}
 
 function getOAuthClient() {
   return new google.auth.OAuth2(
@@ -154,7 +181,7 @@ app.get('/auth/google/callback', async (req, res) => {
 
     // Store user ID in session for status check
     req.session.userId = userId;
-    res.redirect(process.env.FRONTEND_REDIRECT || '/');
+    res.redirect(getFrontendRedirectUrl(req));
   } catch (error) {
     console.error('OAuth callback error:', error);
     res.status(500).send('Failed to authenticate with Google.');
@@ -332,6 +359,10 @@ app.get('/auth/status', async (req, res) => {
   } catch (error) {
     res.json({ authenticated: false });
   }
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(frontendRoot, 'index.html'));
 });
 
 app.listen(port, () => {
