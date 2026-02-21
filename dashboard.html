@@ -239,27 +239,9 @@
                     return;
                 }
 
-                // Get user data for display
-                const userIds = [...new Set(notifications.map(n => n.user_id))];
-                
-                // Try to get user names - adjust based on your actual users table structure
-                let userMap = {};
-                try {
-                    const { data: users } = await supabaseClient
-                        .from('users')
-                        .select('id, name')
-                        .in('id', userIds);
-
-                    if (users) {
-                        users.forEach(u => userMap[u.id] = u.name);
-                    }
-                } catch (e) {
-                    // Users table not found, fall back to generic names
-                }
-
                 let html = '';
                 for (let notif of notifications) {
-                    const userName = userMap[notif.user_id] || 'A friend';
+                    const userName = notif.username || 'A friend';
                     let message = '';
 
                     if (notif.type === 'photos_uploaded') {

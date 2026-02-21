@@ -219,6 +219,14 @@
                 }
 
                 // Create notification for group members
+                const { data: userData } = await supabaseClient
+                    .from('users')
+                    .select('username')
+                    .eq('id', user.id)
+                    .single();
+
+                const username = userData?.username || user.email;
+
                 const { data: groupMembers } = await supabaseClient
                     .from('group_members')
                     .select('user_id')
@@ -232,6 +240,7 @@
                             .insert([
                                 {
                                     user_id: user.id,
+                                    username: username,
                                     group_id: groupId,
                                     recipient_id: m.user_id,
                                     type: 'letter_written',
