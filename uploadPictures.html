@@ -260,21 +260,39 @@
                             .eq('group_id', groupId);
 
                         if (groupMembers && groupMembers.length > 0) {
+                            const recipientIds = groupMembers
+                                .filter(m => m.user_id !== user.id)
+                                .map(m => m.user_id);
+
+                            console.log('Recipient IDs for photo notification:', recipientIds);
+
                             const notificationPromises = groupMembers
                                 .filter(m => m.user_id !== user.id)
-                                .map(m => supabaseClient
-                                    .from('notifications')
-                                    .insert([
-                                        {
-                                            user_id: user.id,
-                                            group_id: groupId,
-                                            recipient_id: m.user_id,
-                                            type: 'photos_uploaded',
-                                            created_at: new Date().toISOString()
-                                        }
-                                    ]));
+                                .map(m => {
+                                    console.log('Creating photo notification for:', m.user_id);
+                                    return supabaseClient
+                                        .from('notifications')
+                                        .insert([
+                                            {
+                                                user_id: user.id,
+                                                group_id: groupId,
+                                                recipient_id: m.user_id,
+                                                type: 'photos_uploaded',
+                                                created_at: new Date().toISOString()
+                                            }
+                                        ]);
+                                });
 
-                            await Promise.all(notificationPromises);
+                            const results = await Promise.all(notificationPromises);
+                            console.log('Photo notification creation results:', results);
+                            
+                            for (let i = 0; i < results.length; i++) {
+                                if (results[i].error) {
+                                    console.error('Photo notification error for recipient', i, ':', results[i].error);
+                                } else {
+                                    console.log('✅ Photo notification created for recipient', i);
+                                }
+                            }
                         }
                     }
 
