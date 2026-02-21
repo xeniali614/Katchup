@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 3001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendRoot = path.resolve(__dirname, '..');
@@ -25,22 +25,32 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !proce
 }
 
 app.use(cors({
-  origin: process.env.FRONTEND_ORIGIN || '*',
+  origin: [
+    'http://localhost:8000',
+    'http://localhost:3000', 
+    'https://xeniali614.github.io', // GitHub Pages domain
+    process.env.FRONTEND_ORIGIN 
+  ].filter(Boolean),
   credentials: true
 }));
+
 app.use(express.json());
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret',
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false, 
   cookie: {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: false,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
-app.use(express.static(frontendRoot));
+
+if (process.env.NODE_ENV !== 'production') {
+  app.use(express.static(frontendRoot));
+}
 
 function getFrontendRedirectUrl(req) {
   const configuredRedirect = process.env.FRONTEND_REDIRECT;

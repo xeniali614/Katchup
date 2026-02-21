@@ -319,7 +319,9 @@
 
     <script src="script.js"></script>
     <script>
-        const BACKEND_URL = 'http://localhost:3001';
+        const BACKEND_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://katchup-calendar-backend.onrender.com';
         let currentDate = new Date();
         let allEvents = [];
         let currentUserId = null;
