@@ -343,7 +343,7 @@ body {
     gap: 5px;
     cursor: pointer;
     background: none;
-    border: 3px solid #304A36;
+    border: 3px solid #F2E7CF;
     z-index: 100;
     flex-shrink: 0;
     padding: 8px;
@@ -352,7 +352,7 @@ body {
 .hamburger-btn span {
     width: 25px;
     height: 4px;
-    background-color: #304A36;
+    background-color: #F2E7CF;
     transition: 0.3s;
 }
 
