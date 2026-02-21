@@ -50,6 +50,10 @@
                 <p>View all photos from your groups</p>
             </div>
 
+            <div id="uploadStatusAlert" class="alert" style="display: none;">
+                <p id="uploadStatusMessage"></p>
+            </div>
+
             <div class="gallery-filters">
                 <select id="groupFilter">
                     <option value="">All Groups</option>
@@ -109,7 +113,96 @@
             }
         }
 
-        // Load pictures
+        // Helper: Calculate week start date (Monday of week) - MUST match uploadPictures.html
+        function getWeekStartDate(date = new Date()) {
+            const d = new Date(date);
+            const dayOfWeek = d.getDay();
+            const diffToMonday = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            d.setDate(diffToMonday);
+            d.setHours(0, 0, 0, 0);
+            d.setMinutes(0, 0, 0);
+            return d.toISOString().split('T')[0];
+        }
+
+        // Check if user has uploaded 3+ photos this week
+        async function checkUserWeeklyUploadStatus(userId) {
+            try {
+                const currentWeekStartStr = getWeekStartDate();
+
+                const { data: thisWeekLogs, error } = await supabaseClient
+                    .from('weekly_logs')
+                    .select('photo_urls')
+                    .eq('user_id', userId)
+                    .eq('week_start_date', currentWeekStartStr);
+
+                if (error || !thisWeekLogs) {
+                    return { hasRequiredPhotos: false, lastUploadWeekStart: null };
+                }
+
+                // Count total photos uploaded this week
+                let photoCount = 0;
+                for (let log of thisWeekLogs) {
+                    if (log.photo_urls && Array.isArray(log.photo_urls)) {
+                        photoCount += log.photo_urls.length;
+                    }
+                }
+
+                if (photoCount >= 3) {
+                    return { hasRequiredPhotos: true, lastUploadWeekStart: null };
+                }
+
+                // Find last upload week
+                const { data: allLogs } = await supabaseClient
+                    .from('weekly_logs')
+                    .select('week_start_date')
+                    .eq('user_id', userId)
+                    .order('week_start_date', { ascending: false })
+                    .limit(1);
+
+                const lastUploadWeekStart = allLogs && allLogs.length > 0 ? allLogs[0].week_start_date : null;
+
+                return { hasRequiredPhotos: false, lastUploadWeekStart };
+            } catch (error) {
+                console.error('Error checking upload status:', error);
+                return { hasRequiredPhotos: false, lastUploadWeekStart: null };
+            }
+        }
+
+        // Calculate days behind
+        function calculateDaysBehind(lastUploadWeekStart) {
+            if (!lastUploadWeekStart) return null;
+
+            const lastUploadDate = new Date(lastUploadWeekStart);
+            const currentWeekStartStr = getWeekStartDate();
+            const currentDate = new Date(currentWeekStartStr);
+
+            const diffTime = Math.abs(currentDate - lastUploadDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            return diffDays;
+        }
+
+        // Update status alert
+        function updateStatusAlert(hasRequiredPhotos, daysBehind) {
+            const alert = document.getElementById('uploadStatusAlert');
+            const message = document.getElementById('uploadStatusMessage');
+
+            if (hasRequiredPhotos) {
+                alert.style.display = 'none';
+            } else if (daysBehind !== null) {
+                alert.classList.remove('success');
+                alert.classList.add('warning');
+                message.textContent = `You are ${daysBehind} days behind on your weekly photo uploads. Upload 3 photos this week to see all group photos!`;
+                alert.style.display = 'block';
+            } else {
+                alert.classList.remove('success');
+                alert.classList.add('warning');
+                message.textContent = 'Upload 3 photos this week to see all group photos!';
+                alert.style.display = 'block';
+            }
+        }
+
+        // Load pictures with access restrictions
         async function loadPictures(groupId = null) {
             try {
                 const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
@@ -117,6 +210,11 @@
                     galleryContainer.innerHTML = '<p class="empty-state">Please log in to view pictures</p>';
                     return;
                 }
+
+                // Check user's upload status
+                const uploadStatus = await checkUserWeeklyUploadStatus(user.id);
+                console.log('Upload status:', uploadStatus);
+                updateStatusAlert(uploadStatus.hasRequiredPhotos, calculateDaysBehind(uploadStatus.lastUploadWeekStart));
 
                 // Get all groups user is member of
                 const { data: memberData } = await supabaseClient
@@ -136,7 +234,18 @@
                     .from('weekly_logs')
                     .select('*')
                     .in('group_id', groupIds)
+                    .order('week_start_date', { ascending: false })
                     .order('created_at', { ascending: false });
+
+                // If user hasn't met weekly requirement, restrict to their last upload week
+                if (!uploadStatus.hasRequiredPhotos && uploadStatus.lastUploadWeekStart) {
+                    console.log('Filtering to week:', uploadStatus.lastUploadWeekStart);
+                    query = query.eq('week_start_date', uploadStatus.lastUploadWeekStart);
+                } else if (!uploadStatus.hasRequiredPhotos && !uploadStatus.lastUploadWeekStart) {
+                    // User has never uploaded, show nothing
+                    galleryContainer.innerHTML = '<p class="empty-state">Upload 3 photos this week to view group photos</p>';
+                    return;
+                }
 
                 if (groupId) {
                     query = query.eq('group_id', groupId);
@@ -144,10 +253,18 @@
 
                 const { data: logs, error } = await query;
 
-                if (error || !logs || logs.length === 0) {
-                    galleryContainer.innerHTML = '<p class="empty-state">No pictures uploaded yet</p>';
+                if (error) {
+                    console.error('Query error:', error);
+                    galleryContainer.innerHTML = '<p class="empty-state">Error loading pictures</p>';
                     return;
                 }
+
+                if (!logs || logs.length === 0) {
+                    galleryContainer.innerHTML = '<p class="empty-state">No pictures available</p>';
+                    return;
+                }
+
+                console.log('Loaded logs:', logs.length);
 
                 let html = '';
                 for (let log of logs) {

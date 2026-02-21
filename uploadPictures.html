@@ -106,6 +106,17 @@
         const uploadsList = document.getElementById('uploadsList');
         const groupSelect = document.getElementById('groupSelect');
 
+        // Helper: Calculate week start date (Monday of week) - matches gallery calculation
+        function getWeekStartDate(date = new Date()) {
+            const d = new Date(date);
+            const dayOfWeek = d.getDay();
+            const diffToMonday = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            d.setDate(diffToMonday);
+            d.setHours(0, 0, 0, 0);
+            d.setMinutes(0, 0, 0);
+            return d.toISOString().split('T')[0];
+        }
+
         // Load user's groups
         async function loadGroups() {
             try {
@@ -203,11 +214,7 @@
                 }
 
                 // Calculate week start date (Monday of current week)
-                const today = new Date();
-                const dayOfWeek = today.getDay();
-                const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-                const weekStart = new Date(today.setDate(diffToMonday));
-                const weekStartDate = weekStart.toISOString().split('T')[0];
+                const weekStartDate = getWeekStartDate();
 
                 // Save to weekly_logs table
                 const { error: dbError } = await supabaseClient
