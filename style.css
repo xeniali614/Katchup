@@ -1,14 +1,17 @@
+@font-face {
+    font-family: 'ByteBounce';
+    src: url('../fonts/bytebounce/ByteBounce.ttf') format('truetype');
+}
+
 :root {
-    --primary-color: #CA3F3F;
-    --secondary-color: #C4E3B5;
-    --text-dark: #304A36;
-    --text-light: #304A36;
-    --bg-light: #F2E7CF;
-    --border-color: #304A36;
-    --shadow: 3px 3px 0px rgba(48, 74, 54, 0.2);
-    --accent-red: #E67575;
-    --accent-green: #C4E3B5;
-    --accent-blue: #ABBFD9;
+    --primary-color: #CA3F3F;       /* Ketchup red */
+    --accent-red: #E67575;          /* Light pink-red */
+    --bg-light: #F2E7CF;            /* Beige */
+    --text-dark: #30364A;           /* Dark blue-gray */
+    --accent-blue: #848EAE;         /* Muted periwinkle */
+    --border-color: #30364A;        /* Dark for borders */
+    --shadow: 3px 3px 0px rgba(48, 54, 74, 0.25);
+    --shadow-lg: 6px 6px 0px rgba(48, 54, 74, 0.25);
 }
 
 * {
@@ -19,14 +22,14 @@
 
 html {
     scroll-behavior: smooth;
-    overflow-y: scroll;
 }
 
 body {
-    font-family: 'Courier New', 'Trebuchet MS', monospace;
+    font-family: 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
+    font-size: px;
     color: var(--text-dark);
     line-height: 1.6;
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
 }
 
 .container {
@@ -37,11 +40,12 @@ body {
 
 /* Navigation */
 .navbar {
-    background-color: #304A36;
-    border-bottom: 8px solid #304A36;
+    background-color: var(--text-dark);
+    border-bottom: 8px solid var(--primary-color);
     position: sticky;
     top: 0;
     z-index: 100;
+    box-shadow: var(--shadow-lg);
 }
 
 .navbar .container {
@@ -54,9 +58,9 @@ body {
 .navbar-brand h1 {
     font-size: 2.5rem;
     font-weight: 900;
-    color: #F2E7CF;
-    text-shadow: 3px 3px 0px #CA3F3F, 6px 6px 0px #E67575;
-    letter-spacing: 3px;
+    color: var(--bg-light);
+    text-shadow: 3px 3px 0px var(--primary-color), 6px 6px 0px var(--accent-red);
+    letter-spacing: 2px;
 }
 
 .navbar-menu {
@@ -66,43 +70,29 @@ body {
     flex-wrap: nowrap;
 }
 
-.logo {
-    height: 50px;
-    width: auto;
-    display: block;
-}
-
 .nav-link {
     text-decoration: none;
     color: var(--bg-light);
     font-weight: 700;
     transition: all 0.1s ease;
     padding: 0.75rem 1.25rem;
-    border: 4px solid var(--border-color);
-    background-color: var(--primary-color);
+    border: 3px solid var(--bg-light);
+    background-color: transparent;
     letter-spacing: 1px;
+    display: inline-block;
 }
 
 .nav-link:hover {
-    background-color: #CA3F3F;
-    color: #F2E7CF;
-    transform: translateY(-3px);
-    box-shadow: 3px 3px 0px rgba(48, 74, 54, 0.3);
-}
-
-/* Home and About (first two nav links) hover to lighter pink */
-.navbar .navbar-menu a:nth-child(1):hover,
-.navbar .navbar-menu a:nth-child(2):hover {
-    background-color: var(--accent-red);
+    background-color: var(--primary-color);
     color: var(--bg-light);
     transform: translateY(-3px);
-    box-shadow: 3px 3px 0px rgba(48, 74, 54, 0.3);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.3);
 }
 
 /* Buttons */
 .btn-primary, .btn-secondary {
     padding: 1rem 2rem;
-    border: 4px solid #304A36;
+    border: 4px solid var(--border-color);
     text-decoration: none;
     font-weight: 900;
     font-size: 1rem;
@@ -113,59 +103,70 @@ body {
 }
 
 .btn-primary {
-    background-color: #CA3F3F;
-    color: #F2E7CF;
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    background-color: var(--primary-color);
+    color: var(--bg-light);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .btn-primary:hover {
-    background-color: #E67575;
+    background-color: var(--accent-red);
     transform: translateY(-4px);
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
 }
 
 .btn-secondary {
-    background-color: #C4E3B5;
-    color: #304A36;
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    background-color: var(--accent-blue);
+    color: var(--bg-light);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .btn-secondary:hover {
-    background-color: #F2E7CF;
+    background-color: var(--text-dark);
     transform: translateY(-4px);
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
 }
 
-/* Unified button sizing and layout */
-.y2k-btn,
-.nav-link,
-.btn-primary,
-.btn-secondary,
-.hamburger-menu a {
+/* Y2K-style nav buttons: red background with beige text */
+.navbar .nav-link.y2k-btn,
+.y2k-btn {
+    background-color: var(--primary-color);
+    color: var(--bg-light);
+    padding: 0.75rem 1.25rem;
+    border: 3px solid var(--border-color);
+    font-weight: 900;
+    font-size: 1rem;
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
+    text-decoration: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.6rem 1.25rem;
-    min-width: 140px;
-    height: 52px;
-    box-sizing: border-box;
-    text-align: center;
+    gap: 0.5rem;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    letter-spacing: 1px;
 }
 
-/* Ensure form submit buttons match sizing when they use btn-primary */
-.btn-submit {
-    /* unified sizing handled below; avoid conflicting resets */
+.navbar .nav-link.y2k-btn:hover,
+.y2k-btn:hover {
+    transform: translateY(-3px);
+    background-color: var(--accent-red);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
+}
+
+.navbar .nav-link.y2k-btn:active,
+.y2k-btn:active {
+    transform: translateY(0);
+    box-shadow: 2px 2px 0px rgba(48, 54, 74, 0.15);
 }
 
 /* Hero Section */
 .hero {
     padding: 6rem 0;
-    background-color: #C4E3B5;
+    background-color: var(--accent-blue);
     min-height: 500px;
     display: flex;
     align-items: center;
-    border: 10px solid #304A36;
-    box-shadow: 10px 10px 0px rgba(48, 74, 54, 0.2);
+    border: 10px solid var(--border-color);
+    box-shadow: 10px 10px 0px rgba(48, 54, 74, 0.2);
 }
 
 .hero-content {
@@ -176,21 +177,21 @@ body {
     font-size: 4rem;
     font-weight: 900;
     margin-bottom: 1rem;
-    color: #304A36;
+    color: var(--text-dark);
     line-height: 1.2;
-    letter-spacing: 3px;
-    text-shadow: 4px 4px 0px #F2E7CF, 8px 8px 0px #E67575;
+    letter-spacing: 2px;
+    text-shadow: 4px 4px 0px var(--bg-light), 8px 8px 0px var(--accent-red);
 }
 
 .hero p {
     font-size: 1.5rem;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 2rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 .hero-buttons {
@@ -202,16 +203,16 @@ body {
 
 .hero-buttons .btn-primary,
 .hero-buttons .btn-secondary {
-    padding: 0.6rem 1.25rem;
-    font-size: 1rem;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
 }
 
 /* Features Section */
 .features {
     padding: 4rem 0;
-    background-color: #C4E3B5;
-    border-top: 8px solid #304A36;
-    border-bottom: 8px solid #304A36;
+    background-color: var(--accent-blue);
+    border-top: 8px solid var(--border-color);
+    border-bottom: 8px solid var(--border-color);
 }
 
 .features h3 {
@@ -219,9 +220,9 @@ body {
     font-weight: 900;
     text-align: center;
     margin-bottom: 3rem;
-    color: #304A36;
-    letter-spacing: 3px;
-    text-shadow: 3px 3px 0px #C4E3B5;
+    color: var(--text-dark);
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0px var(--bg-light);
 }
 
 .features-grid {
@@ -231,28 +232,28 @@ body {
 }
 
 .feature-card {
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
     padding: 2rem;
-    border: 5px solid #304A36;
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    border: 5px solid var(--border-color);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .feature-card:hover {
     transform: translateY(-6px);
-    box-shadow: 8px 8px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 8px 8px 0px rgba(48, 54, 74, 0.2);
 }
 
 .feature-card h4 {
     font-size: 1.5rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
-    color: #CA3F3F;
-    letter-spacing: 2px;
+    color: var(--primary-color);
+    letter-spacing: 1px;
 }
 
 .feature-card p {
-    color: #304A36;
+    color: var(--text-dark);
     line-height: 1.7;
     font-weight: 600;
 }
@@ -260,20 +261,19 @@ body {
 /* CTA Section */
 .cta {
     padding: 4rem 0;
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
     text-align: center;
-    color: #304A36;
-    border: 8px solid #304A36;
-    box-shadow: inset 0 0 20px rgba(48, 74, 54, 0.1);
+    color: var(--text-dark);
+    border: 8px solid var(--border-color);
+    box-shadow: inset 0 0 20px rgba(48, 54, 74, 0.1);
 }
 
 .cta h3 {
     font-size: 3rem;
     font-weight: 900;
     margin-bottom: 1rem;
-    letter-spacing: 3px;
-    text-shadow: 3px 3px 0px #C4E3B5;
-    color: #304A36;
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0px var(--accent-blue);
 }
 
 .cta p {
@@ -284,25 +284,25 @@ body {
 }
 
 .cta .btn-primary {
-    background-color: #CA3F3F;
-    color: #F2E7CF;
+    background-color: var(--primary-color);
+    color: var(--bg-light);
     font-weight: 900;
 }
 
 .cta .btn-primary:hover {
-    background-color: #E67575;
+    background-color: var(--accent-red);
     transform: translateY(-4px);
 }
 
 /* Footer */
 .footer {
-    background-color: #304A36;
-    color: #F2E7CF;
+    background-color: var(--text-dark);
+    color: var(--bg-light);
     padding: 3rem 0;
     text-align: center;
-    border-top: 8px solid #CA3F3F;
+    border-top: 8px solid var(--primary-color);
     font-weight: 700;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 /* Responsive Design */
@@ -373,7 +373,7 @@ body {
     gap: 5px;
     cursor: pointer;
     background: none;
-    border: 3px solid #F2E7CF;
+    border: 3px solid var(--bg-light);
     z-index: 100;
     flex-shrink: 0;
     padding: 8px;
@@ -382,7 +382,7 @@ body {
 .hamburger-btn span {
     width: 25px;
     height: 4px;
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
     transition: 0.3s;
 }
 
@@ -393,30 +393,29 @@ body {
     position: absolute;
     top: 100%; 
     right: 0;
-    background-color: #F2E7CF;
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    background-color: var(--bg-light);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
     width: 200px;
     display: none; 
     flex-direction: column;
-    border: 4px solid #304A36;
+    border: 4px solid var(--border-color);
 }
 
 .hamburger-menu li {
-    border-bottom: 3px solid #304A36;
+    border-bottom: 3px solid var(--border-color);
 }
 .hamburger-menu a {
     display: block;
     padding: 15px;
     text-decoration: none;
-    color: var(--bg-light);
-    background-color: var(--primary-color);
+    color: var(--text-dark);
     white-space: nowrap;
     font-weight: 700;
 }
 
 .hamburger-menu a:hover {
-    background-color: #CA3F3F;
-    color: #F2E7CF;
+    background-color: var(--primary-color);
+    color: var(--bg-light);
 }
 
 .hamburger-menu.active {
@@ -434,34 +433,13 @@ body {
     transform: rotate(-45deg) translate(5px, -6px);
 }
 
-/* Ensure any link targeting join.html appears as the primary red button */
-a[href$="join.html"] {
-    background-color: var(--primary-color) !important;
-    color: var(--bg-light) !important;
-    border: 4px solid var(--border-color) !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0.6rem 1.25rem !important;
-    min-width: 140px !important;
-    height: 52px !important;
-    box-sizing: border-box !important;
-    text-decoration: none !important;
-}
-
-a[href$="join.html"]:hover {
-    background-color: var(--accent-red) !important;
-    transform: translateY(-3px) !important;
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2) !important;
-}
-
 /* Authentication Styles */
 .auth-section {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #C4E3B5;
+    background-color: var(--accent-blue);
     padding: 2rem 0;
 }
 
@@ -472,9 +450,9 @@ a[href$="join.html"]:hover {
 }
 
 .auth-card {
-    background-color: #F2E7CF;
-    border: 6px solid #304A36;
-    box-shadow: 8px 8px 0px rgba(48, 74, 54, 0.2);
+    background-color: var(--bg-light);
+    border: 6px solid var(--border-color);
+    box-shadow: 8px 8px 0px rgba(48, 54, 74, 0.2);
     padding: 3rem 2rem;
 }
 
@@ -482,15 +460,15 @@ a[href$="join.html"]:hover {
     font-size: 2.5rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
-    color: #CA3F3F;
+    color: var(--primary-color);
     text-align: center;
     letter-spacing: 2px;
-    text-shadow: 2px 2px 0px #304A36;
+    text-shadow: 2px 2px 0px var(--text-dark);
 }
 
 .auth-subtitle {
     text-align: center;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 2rem;
     font-size: 0.95rem;
     font-weight: 700;
@@ -510,7 +488,7 @@ a[href$="join.html"]:hover {
 
 .form-group label {
     font-weight: 900;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 0.5rem;
     font-size: 1rem;
     letter-spacing: 1px;
@@ -518,8 +496,8 @@ a[href$="join.html"]:hover {
 
 .form-group input {
     padding: 1rem 1rem;
-    border: 4px solid #304A36;
-    background-color: #F2E7CF;
+    border: 4px solid var(--border-color);
+    background-color: var(--bg-light);
     font-size: 1rem;
     font-family: inherit;
     transition: all 0.1s ease;
@@ -533,9 +511,9 @@ a[href$="join.html"]:hover {
 
 .form-group input[type="file"]::file-selector-button {
     padding: 0.75rem 1.5rem;
-    background-color: #CA3F3F;
-    color: #F2E7CF;
-    border: 3px solid #304A36;
+    background-color: var(--primary-color);
+    color: var(--bg-light);
+    border: 3px solid var(--border-color);
     cursor: pointer;
     font-weight: 900;
     transition: all 0.1s ease;
@@ -546,18 +524,18 @@ a[href$="join.html"]:hover {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #CA3F3F;
-    background-color: #C4E3B5;
+    border-color: var(--primary-color);
+    background-color: var(--accent-blue);
     box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
 }
 
 .form-group select {
     padding: 1rem 1rem;
-    border: 4px solid #304A36;
+    border: 4px solid var(--border-color);
     border-radius: 0;
     font-size: 1rem;
     font-family: inherit;
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
     cursor: pointer;
     transition: all 0.1s ease;
     font-weight: 600;
@@ -569,27 +547,22 @@ a[href$="join.html"]:hover {
 }
 
 .btn-submit {
-    width: auto;
-    padding: 0.6rem 1.25rem;
-    min-width: 140px;
-    height: 52px;
+    width: 100%;
+    padding: 1rem;
     font-size: 1.1rem;
     font-weight: 900;
-    border: 4px solid #304A36;
+    border: 4px solid var(--border-color);
     border-radius: 0;
     cursor: pointer;
     transition: all 0.1s ease;
-    background-color: #CA3F3F;
-    color: #F2E7CF;
+    background-color: var(--primary-color);
+    color: var(--bg-light);
     letter-spacing: 2px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .btn-submit:hover {
     transform: translateY(-3px);
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .btn-submit:disabled {
@@ -599,7 +572,7 @@ a[href$="join.html"]:hover {
 
 .message {
     padding: 1rem;
-    border: 4px solid #304A36;
+    border: 4px solid var(--border-color);
     text-align: center;
     font-weight: 900;
     display: none;
@@ -608,26 +581,26 @@ a[href$="join.html"]:hover {
 }
 
 .message.success {
-    background-color: #C4E3B5;
-    color: #304A36;
-    border: 4px solid #304A36;
+    background-color: var(--accent-blue);
+    color: var(--text-dark);
+    border: 4px solid var(--border-color);
 }
 
 .message.error {
-    background-color: #E67575;
-    color: #F2E7CF;
-    border: 4px solid #CA3F3F;
+    background-color: var(--accent-red);
+    color: var(--bg-light);
+    border: 4px solid var(--primary-color);
 }
 
 .auth-footer {
     text-align: center;
-    color: #304A36;
+    color: var(--text-dark);
     font-size: 0.95rem;
     font-weight: 700;
 }
 
 .auth-footer a {
-    color: #CA3F3F;
+    color: var(--primary-color);
     text-decoration: none;
     font-weight: 900;
     transition: all 0.1s ease;
@@ -635,7 +608,7 @@ a[href$="join.html"]:hover {
 }
 
 .auth-footer a:hover {
-    color: #E67575;
+    color: var(--accent-red);
     text-decoration: underline;
 }
 
@@ -657,7 +630,7 @@ a[href$="join.html"]:hover {
 .upload-section {
     padding: 4rem 0;
     min-height: calc(100vh - 80px);
-    background-color: #F2E7CF;
+    background-color: var(--bg-light);
 }
 
 .section-header {
@@ -668,24 +641,24 @@ a[href$="join.html"]:hover {
 .section-header h2 {
     font-size: 3rem;
     font-weight: 900;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 1rem;
     letter-spacing: 2px;
-    text-shadow: 3px 3px 0px #C4E3B5;
+    text-shadow: 3px 3px 0px var(--accent-blue);
 }
 
 .section-header p {
     font-size: 1.2rem;
-    color: #304A36;
+    color: var(--text-dark);
     max-width: 600px;
     margin: 0 auto;
     font-weight: 700;
 }
 
 .upload-form-container {
-    background-color: #C4E3B5;
-    border: 6px solid #304A36;
-    box-shadow: 8px 8px 0px rgba(48, 74, 54, 0.2);
+    background-color: var(--accent-blue);
+    border: 6px solid var(--border-color);
+    box-shadow: 8px 8px 0px rgba(48, 54, 74, 0.2);
     padding: 3rem 2rem;
     max-width: 600px;
     margin: 0 auto 4rem;
@@ -699,8 +672,8 @@ a[href$="join.html"]:hover {
 
 .form-group textarea {
     padding: 1rem 1rem;
-    border: 4px solid #304A36;
-    background-color: #F2E7CF;
+    border: 4px solid var(--border-color);
+    background-color: var(--bg-light);
     font-size: 1rem;
     font-family: inherit;
     transition: all 0.1s ease;
@@ -710,8 +683,8 @@ a[href$="join.html"]:hover {
 
 .form-group textarea:focus {
     outline: none;
-    border-color: #CA3F3F;
-    background-color: #C4E3B5;
+    border-color: var(--primary-color);
+    background-color: var(--accent-blue);
     box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
 }
 
@@ -727,7 +700,7 @@ a[href$="join.html"]:hover {
 .uploads-container h3 {
     font-size: 2rem;
     font-weight: 900;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 2rem;
     text-align: center;
 }
@@ -745,7 +718,7 @@ a[href$="join.html"]:hover {
 .letters-container h3 {
     font-size: 2rem;
     font-weight: 900;
-    color: #304A36;
+    color: var(--text-dark);
     margin-bottom: 2rem;
     text-align: center;
 }
@@ -757,16 +730,16 @@ a[href$="join.html"]:hover {
 }
 
 .letter-card {
-    background-color: #F2E7CF;
-    border: 4px solid #304A36;
+    background-color: var(--bg-light);
+    border: 4px solid var(--border-color);
     padding: 1.5rem;
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .letter-card:hover {
     transform: translateY(-4px);
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
 }
 
 .letter-card-header {
@@ -780,31 +753,31 @@ a[href$="join.html"]:hover {
 .letter-card-header h4 {
     font-size: 1.2rem;
     font-weight: 900;
-    color: #CA3F3F;
+    color: var(--primary-color);
     margin: 0;
 }
 
 .letter-card-header span {
     font-size: 0.85rem;
-    color: #304A36;
+    color: var(--text-dark);
     white-space: nowrap;
 }
 
 .letter-group {
-    color: #CA3F3F;
+    color: var(--primary-color);
     font-weight: 700;
     font-size: 0.9rem;
     margin: 0 0 0.5rem 0;
 }
 
 .letter-author {
-    color: #304A36;
+    color: var(--text-dark);
     font-size: 0.9rem;
     margin: 0 0 0.5rem 0;
 }
 
 .letter-snippet {
-    color: #304A36;
+    color: var(--text-dark);
     font-size: 0.95rem;
     line-height: 1.6;
     margin: 0;
@@ -815,16 +788,16 @@ a[href$="join.html"]:hover {
 }
 
 .upload-item {
-    background-color: #F2E7CF;
-    border: 4px solid #304A36;
+    background-color: var(--bg-light);
+    border: 4px solid var(--border-color);
     overflow: hidden;
-    box-shadow: 4px 4px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .upload-item:hover {
     transform: translateY(-4px);
-    box-shadow: 6px 6px 0px rgba(48, 74, 54, 0.2);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
 }
 
 .upload-item img {
@@ -836,7 +809,7 @@ a[href$="join.html"]:hover {
 
 .upload-item p {
     padding: 1rem;
-    color: #304A36;
+    color: var(--text-dark);
     font-size: 0.95rem;
     text-align: center;
     word-break: break-word;
@@ -844,11 +817,10 @@ a[href$="join.html"]:hover {
 
 .empty-state {
     text-align: center;
-    color: #304A36;
-    font-size: 1.2rem;
+    color: var(--text-dark);
+    font-size: 1.1rem;
     padding: 3rem;
     grid-column: 1 / -1;
-    font-weight: 600;
 }
 
 @media (max-width: 768px) {
@@ -910,7 +882,7 @@ a[href$="join.html"]:hover {
 .groups-section {
     padding: 4rem 0;
     min-height: calc(100vh - 80px);
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+    background-color: var(--bg-light);
 }
 
 .section-header {
@@ -942,29 +914,33 @@ a[href$="join.html"]:hover {
 
 .tab-btn {
     padding: 0.75rem 1.5rem;
-    background-color: white;
+    background-color: var(--bg-light);
     color: var(--text-dark);
-    border: 2px solid var(--border-color);
-    border-radius: 0.375rem;
-    font-weight: 600;
+    border: 4px solid var(--border-color);
+    border-radius: 0;
+    font-weight: 900;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.1s ease;
+    letter-spacing: 1px;
 }
 
 .tab-btn:hover {
     border-color: var(--primary-color);
-    color: var(--primary-color);
+    color: var(--bg-light);
+    background-color: var(--primary-color);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .tab-btn.active {
     background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+    color: var(--bg-light);
+    border-color: var(--border-color);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .tab-content {
     display: none;
-    animation: fadeIn 0.3s ease-in-out;
+    animation: fadeIn 0.1s ease-in-out;
 }
 
 .tab-content.active {
@@ -981,9 +957,9 @@ a[href$="join.html"]:hover {
 }
 
 .form-card {
-    background-color: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    background-color: var(--accent-blue);
+    border: 6px solid var(--border-color);
+    box-shadow: 8px 8px 0px rgba(48, 54, 74, 0.2);
     padding: 3rem 2rem;
     max-width: 600px;
     margin: 0 auto;
@@ -991,10 +967,11 @@ a[href$="join.html"]:hover {
 
 .form-card h3 {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 900;
     color: var(--text-dark);
     margin-bottom: 2rem;
     text-align: center;
+    letter-spacing: 1px;
 }
 
 .group-form {
@@ -1011,21 +988,21 @@ a[href$="join.html"]:hover {
 }
 
 .group-card {
-    background-color: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-light);
+    border: 4px solid var(--border-color);
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .group-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
 }
 
 .group-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--bg-light);
     padding: 1.5rem;
     display: flex;
     justify-content: space-between;
@@ -1034,8 +1011,9 @@ a[href$="join.html"]:hover {
 
 .group-header h4 {
     font-size: 1.3rem;
-    font-weight: 700;
+    font-weight: 900;
     margin: 0;
+    color: var(--bg-light);
 }
 
 .group-name-display {
@@ -1052,30 +1030,35 @@ a[href$="join.html"]:hover {
 .group-name-input {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 2px solid white;
-    border-radius: 0.375rem;
+    border: 3px solid var(--border-color);
+    border-radius: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: var(--bg-light);
     color: var(--text-dark);
-    transition: all 0.3s ease;
+    transition: all 0.1s ease;
 }
 
 .group-name-input:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
 }
 
 .badge {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--accent-red);
     padding: 0.25rem 0.75rem;
-    border-radius: 2rem;
+    border-radius: 0;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 900;
+    color: var(--bg-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .group-content {
     padding: 1.5rem;
+    background-color: var(--bg-light);
 }
 
 .group-content p {
@@ -1087,28 +1070,32 @@ a[href$="join.html"]:hover {
 .group-content strong {
     color: var(--primary-color);
     font-family: 'Courier New', monospace;
+    font-weight: 900;
 }
 
 .btn-copy {
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.5rem;
     background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
+    color: var(--bg-light);
+    border: 3px solid var(--border-color);
+    border-radius: 0;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 900;
     font-size: 0.9rem;
-    transition: background-color 0.3s ease;
+    transition: all 0.1s ease;
+    letter-spacing: 1px;
 }
 
 .btn-copy:hover {
-    background-color: #4f46e5;
+    background-color: var(--accent-red);
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 0px rgba(48, 54, 74, 0.2);
 }
 
 .group-members {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 3px solid var(--border-color);
 }
 
 .group-members strong {
@@ -1116,6 +1103,7 @@ a[href$="join.html"]:hover {
     margin-bottom: 0.5rem;
     color: var(--text-dark);
     font-size: 0.95rem;
+    font-weight: 900;
 }
 
 .group-members ul {
@@ -1126,7 +1114,7 @@ a[href$="join.html"]:hover {
 
 .group-members li {
     padding: 0.25rem 0;
-    color: var(--text-light);
+    color: var(--text-dark);
     font-size: 0.9rem;
 }
 
@@ -1144,19 +1132,22 @@ a[href$="join.html"]:hover {
 }
 
 .btn-danger {
-    padding: 0.5rem 1rem;
-    background-color: #ef4444;
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--accent-red);
+    color: var(--bg-light);
+    border: 3px solid var(--border-color);
+    border-radius: 0;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 900;
     font-size: 0.9rem;
-    transition: background-color 0.3s ease;
+    transition: all 0.1s ease;
+    letter-spacing: 1px;
 }
 
 .btn-danger:hover {
-    background-color: #dc2626;
+    background-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 0px rgba(48, 54, 74, 0.2);
 }
 
 @media (max-width: 768px) {
@@ -1186,7 +1177,7 @@ a[href$="join.html"]:hover {
 .gallery-section {
     padding: 4rem 0;
     min-height: calc(100vh - 80px);
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+    background-color: var(--bg-light);
 }
 
 .gallery-filters {
@@ -1199,25 +1190,27 @@ a[href$="join.html"]:hover {
 
 .gallery-filters select {
     padding: 0.75rem 1.5rem;
-    border: 2px solid var(--border-color);
-    border-radius: 0.5rem;
+    border: 4px solid var(--border-color);
+    border-radius: 0;
     font-size: 1rem;
     cursor: pointer;
-    background-color: white;
+    background-color: var(--bg-light);
     color: var(--text-dark);
     min-width: 250px;
-    font-weight: 500;
-    transition: all 0.3s ease;
+    font-weight: 900;
+    transition: all 0.1s ease;
+    letter-spacing: 1px;
 }
 
 .gallery-filters select:hover {
     border-color: var(--primary-color);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
 }
 
 .gallery-filters select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
 }
 
 .gallery-grid {
@@ -1230,18 +1223,18 @@ a[href$="join.html"]:hover {
 .gallery-item {
     position: relative;
     overflow: hidden;
-    border-radius: 0.75rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border-radius: 0;
+    background-color: var(--bg-light);
+    border: 4px solid var(--border-color);
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
     cursor: pointer;
     aspect-ratio: 1 / 1;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    transition: all 0.1s ease;
 }
 
 .gallery-item:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    transform: translateY(-6px);
+    box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
     border-color: var(--primary-color);
 }
 
@@ -1263,12 +1256,12 @@ a[href$="join.html"]:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.85) 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(48, 54, 74, 0.9) 100%);
     display: flex;
     align-items: flex-end;
     padding: 1.5rem;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.1s ease;
 }
 
 .gallery-item:hover .gallery-overlay {
@@ -1280,15 +1273,17 @@ a[href$="join.html"]:hover {
 }
 
 .gallery-date {
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--bg-light);
     font-size: 0.9rem;
     margin: 0 0 0.75rem 0;
-    font-weight: 600;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .gallery-caption {
-    color: white;
-    font-weight: 600;
+    color: var(--bg-light);
+    font-weight: 900;
     font-size: 1rem;
     line-height: 1.5;
     display: -webkit-box;
@@ -1296,11 +1291,13 @@ a[href$="join.html"]:hover {
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin: 0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .empty-state {
     text-align: center;
-    color: var(--text-light);
+    color: var(--text-dark);
     font-size: 1.1rem;
     padding: 3rem;
     grid-column: 1 / -1;
@@ -1469,525 +1466,6 @@ a[href$="join.html"]:hover {
 
     .lightbox-image {
         max-height: 60vh;
-    }
-}
-
-/* Calendar / Schedule Styles */
-.schedule-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 2rem 0 1rem 0;
-    padding: 0 20px;
-}
-
-.schedule-header h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-dark);
-}
-
-.calendar-controls {
-    margin: 1.5rem 0;
-}
-
-.login-prompt {
-    text-align: center;
-    padding: 3rem 2rem;
-    background-color: var(--bg-light);
-    border-radius: 0.5rem;
-    margin-top: 2rem;
-}
-
-.login-prompt p {
-    font-size: 1.1rem;
-    color: var(--text-light);
-}
-
-.events-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
-
-.event-card {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.event-card:hover {
-    box-shadow: var(--shadow);
-    transform: translateY(-4px);
-}
-
-.event-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.event-header h4 {
-    font-size: 1.25rem;
-    color: var(--text-dark);
-    margin: 0;
-    flex: 1;
-}
-
-.event-actions {
-    display: flex;
-    gap: 0.75rem;
-}
-
-.btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-small:hover {
-    background-color: #4f46e5;
-}
-
-.btn-small.delete-btn {
-    background-color: #ef4444;
-}
-
-.btn-small.delete-btn:hover {
-    background-color: #dc2626;
-}
-
-.event-time {
-    font-size: 0.95rem;
-    color: var(--text-light);
-    margin: 0.5rem 0;
-}
-
-.event-description {
-    font-size: 0.95rem;
-    color: var(--text-dark);
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.no-events {
-    text-align: center;
-    padding: 2rem;
-    color: var(--text-light);
-    font-size: 1.1rem;
-}
-
-.no-events a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.no-events a:hover {
-    text-decoration: underline;
-}
-
-.loading {
-    text-align: center;
-    padding: 2rem;
-    color: var(--text-light);
-}
-
-.error {
-    text-align: center;
-    padding: 2rem;
-    color: #ef4444;
-    font-weight: 600;
-}
-
-/* Modal Styles */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: #ffffff;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
-}
-
-.modal-content h3 {
-    font-size: 1.5rem;
-    color: var(--text-dark);
-    margin-bottom: 1.5rem;
-}
-
-.close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-size: 1.5rem;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-light);
-    transition: color 0.2s ease;
-}
-
-.close:hover {
-    color: var(--text-dark);
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.form-group input,
-.form-group textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
-    font-family: inherit;
-    font-size: 1rem;
-    transition: border-color 0.2s ease;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.form-group textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.btn-secondary {
-    background-color: #6b7280;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-}
-
-@media (max-width: 768px) {
-    .schedule-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .events-list {
-        grid-template-columns: 1fr;
-    }
-
-    .modal-content {
-        width: 95%;
-        padding: 1.5rem;
-    }
-}
-
-/* Calendar View Styles */
-.calendar-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid var(--border-color);
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.calendar-toolbar h3 {
-    font-size: 1.5rem;
-    margin: 0;
-    flex: 1;
-    text-align: center;
-}
-
-.calendar-container {
-    background-color: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    width: 100%;
-}
-
-.calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    width: 100%;
-}
-
-.weekday {
-    text-align: center;
-    font-weight: 700;
-    color: var(--primary-color);
-    padding: 0.75rem 0;
-    font-size: 0.9rem;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    width: 100%;
-    min-height: 500px;
-}
-
-.calendar-day {
-    border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
-    padding: 0.75rem;
-    min-height: 100px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: #fafafa;
-    position: relative;
-}
-
-.calendar-day:hover {
-    background-color: #f0f0f0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.calendar-day.empty {
-    background-color: transparent;
-    border: none;
-    cursor: default;
-}
-
-.calendar-day.empty:hover {
-    background-color: transparent;
-    box-shadow: none;
-}
-
-.calendar-day.today {
-    background-color: rgba(99, 102, 241, 0.1);
-    border-color: var(--primary-color);
-    font-weight: 600;
-}
-
-.day-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.day-number {
-    font-weight: 700;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-}
-
-.event-indicator {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Day Details Panel */
-.day-details-panel {
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 350px;
-    background-color: #ffffff;
-    border-left: 2px solid var(--border-color);
-    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.1);
-    z-index: 999;
-    overflow-y: auto;
-}
-
-.day-details-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    background-color: #ffffff;
-}
-
-.day-details-header h4 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--text-dark);
-}
-
-.close-panel {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-light);
-    transition: color 0.2s ease;
-}
-
-.close-panel:hover {
-    color: var(--text-dark);
-}
-
-.day-events-list {
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.day-event-card {
-    background-color: var(--bg-light);
-    border: 1px solid var(--border-color);
-    border-radius: 0.375rem;
-    padding: 1rem;
-    transition: all 0.2s ease;
-}
-
-.day-event-card:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.day-event-card h5 {
-    margin: 0 0 0.5rem 0;
-    color: var(--text-dark);
-    font-size: 1rem;
-}
-
-.day-event-card .event-time {
-    margin: 0.5rem 0;
-    color: var(--text-light);
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.day-event-card .event-desc {
-    margin: 0.75rem 0 0 0;
-    color: var(--text-dark);
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.event-actions-small {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-.event-actions-small .btn-small {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-}
-
-/* Modal Close Button */
-.modal-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--text-light);
-}
-
-.modal-close:hover {
-    color: var(--text-dark);
-}
-
-@media (max-width: 1024px) {
-    .day-details-panel {
-        width: 100%;
-        max-width: 400px;
-    }
-}
-
-@media (max-width: 768px) {
-    .calendar-grid {
-        min-height: 400px;
-    }
-
-    .calendar-day {
-        min-height: 80px;
-        padding: 0.5rem;
-    }
-
-    .day-number {
-        font-size: 0.9rem;
-    }
-
-    .event-indicator {
-        font-size: 0.7rem;
-    }
-
-    .day-details-panel {
-        width: 100%;
-        right: auto;
-        left: 0;
-        border-left: none;
-        border-top: 2px solid var(--border-color);
-        bottom: auto;
-        top: auto;
-        max-height: 50vh;
-    }
-
-    .calendar-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .calendar-toolbar h3 {
-        order: 2;
-    }
-
-    .btn-small {
-        flex: 1;
     }
 }
 
