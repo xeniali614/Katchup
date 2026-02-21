@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Katchup</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>Katchup</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="index.html#about" class="nav-link">About</a>
+                <a href="join.html" class="nav-link btn-secondary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sign In Section -->
+    <section class="auth-section">
+        <div class="auth-container">
+            <div class="auth-card">
+                <h2>Welcome Back</h2>
+                <p class="auth-subtitle">Sign in to your Katchup account</p>
+
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="you@example.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="Enter your password"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-submit">Sign In</button>
+                </form>
+
+                <div id="message" class="message"></div>
+
+                <p class="auth-footer">
+                    Don't have an account? <a href="join.html">Sign Up</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Initialize Supabase
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const loginForm = document.getElementById('loginForm');
+        const messageEl = document.getElementById('message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // Show loading state
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+
+                // Sign in user with Supabase Auth
+                const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (authError) {
+                    showMessage(authError.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                    return;
+                }
+
+                showMessage('Sign in successful! Redirecting...', 'success');
+                // Redirect to dashboard after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }
+        });
+
+        function showMessage(message, type) {
+            messageEl.textContent = message;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>

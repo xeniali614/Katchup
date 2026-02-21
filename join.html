@@ -1,1 +1,184 @@
-<!-- for the join squad link-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Katchup</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>Katchup</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="index.html#about" class="nav-link">About</a>
+                <a href="dashboard.html" class="nav-link btn-primary">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sign Up Section -->
+    <section class="auth-section">
+        <div class="auth-container">
+            <div class="auth-card">
+                <h2>Create Your Account</h2>
+                <p class="auth-subtitle">Join Katchup and start organizing meetups</p>
+
+                <form id="signupForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input 
+                            type="text" 
+                            id="fullName" 
+                            name="fullName" 
+                            placeholder="John Doe"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="you@example.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="At least 6 characters"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            name="confirmPassword" 
+                            placeholder="Confirm your password"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-submit">Create Account</button>
+                </form>
+
+                <div id="message" class="message"></div>
+
+                <p class="auth-footer">
+                    Already have an account? <a href="login.html">Sign In</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Initialize Supabase
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const signupForm = document.getElementById('signupForm');
+        const messageEl = document.getElementById('message');
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match', 'error');
+                return;
+            }
+
+            // Validate password length
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                // Show loading state
+                const submitBtn = signupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating account...';
+
+                // Sign up user with Supabase Auth
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+
+                if (authError) {
+                    showMessage(authError.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                    return;
+                }
+
+                // Store user profile in profiles table
+                const { data: profileData, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .insert([
+                        {
+                            id: authData.user.id,
+                            full_name: fullName,
+                            email: email,
+                        }
+                    ]);
+
+                if (profileError) {
+                    showMessage('Account created but profile failed: ' + profileError.message, 'error');
+                } else {
+                    showMessage('Account created successfully! Redirecting...', 'success');
+                    // Redirect to dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+                const submitBtn = signupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+
+        function showMessage(message, type) {
+            messageEl.textContent = message;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
