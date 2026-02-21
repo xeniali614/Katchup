@@ -674,6 +674,12 @@ body {
     margin: 0 0 0.5rem 0;
 }
 
+.letter-author {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+}
+
 .letter-snippet {
     color: var(--text-dark);
     font-size: 0.95rem;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Letter Logs - Katchup</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -41,5 +41,150 @@
             </div>
         </div>
     </nav>
+
+    <!-- Letter Logs Section -->
+    <section class="upload-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Letter Logs</h2>
+                <p>Read letters shared by everyone in your groups.</p>
+            </div>
+
+            <div class="gallery-filters">
+                <select id="letterGroupFilter">
+                    <option value="">All Groups</option>
+                </select>
+            </div>
+
+            <div id="lettersFeed" class="letters-grid">
+                <p class="empty-state">Loading letters...</p>
+            </div>
+        </div>
+    </section>
+
     <script src="script.js"></script>
+    <script>
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const lettersFeed = document.getElementById('lettersFeed');
+        const letterGroupFilter = document.getElementById('letterGroupFilter');
+        let currentGroupId = '';
+
+        async function loadGroupOptions() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    return;
+                }
+
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id, groups(id, name)')
+                    .eq('user_id', user.id);
+
+                if (memberData && memberData.length > 0) {
+                    let options = '<option value="">All Groups</option>';
+                    for (let member of memberData) {
+                        options += `<option value="${member.groups.id}">${member.groups.name}</option>`;
+                    }
+                    letterGroupFilter.innerHTML = options;
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+            }
+        }
+
+        async function loadLetters(groupId = null) {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    lettersFeed.innerHTML = '<p class="empty-state">Please log in to view letters</p>';
+                    return;
+                }
+
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id')
+                    .eq('user_id', user.id);
+
+                if (!memberData || memberData.length === 0) {
+                    lettersFeed.innerHTML = '<p class="empty-state">Join a group to see letters</p>';
+                    return;
+                }
+
+                const groupIds = memberData.map((member) => member.group_id);
+
+                let query = supabaseClient
+                    .from('letters')
+                    .select('id, title, content, created_at, group_id, user_id, groups(name)')
+                    .in('group_id', groupIds)
+                    .order('created_at', { ascending: false });
+
+                if (groupId) {
+                    query = query.eq('group_id', groupId);
+                }
+
+                const { data: letters, error } = await query;
+
+                if (error) {
+                    console.error('Letters query error:', error);
+                    lettersFeed.innerHTML = `<p class="empty-state">Error loading letters: ${error.message}</p>`;
+                    return;
+                }
+
+                if (!letters || letters.length === 0) {
+                    lettersFeed.innerHTML = '<p class="empty-state">No letters shared yet</p>';
+                    return;
+                }
+
+                let html = '';
+                for (let letter of letters) {
+                    const dateText = new Date(letter.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    const groupName = letter.groups?.name || 'Unknown group';
+                    const authorName = letter.user_id ? `Member ${letter.user_id.slice(0, 8)}` : 'Unknown';
+
+                    html += `
+                        <div class="letter-card">
+                            <div class="letter-card-header">
+                                <h4>${letter.title}</h4>
+                                <span>${dateText}</span>
+                            </div>
+                            <p class="letter-group">${groupName}</p>
+                            <p class="letter-author">By ${authorName}</p>
+                            <p class="letter-snippet">${letter.content}</p>
+                        </div>
+                    `;
+                }
+
+                lettersFeed.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading letters:', error);
+                lettersFeed.innerHTML = '<p class="empty-state">Error loading letters</p>';
+            }
+        }
+
+        letterGroupFilter.addEventListener('change', (e) => {
+            currentGroupId = e.target.value || '';
+            loadLetters(currentGroupId || null);
+        });
+
+        setInterval(() => {
+            loadLetters(currentGroupId || null);
+        }, 15000);
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                loadLetters(currentGroupId || null);
+            }
+        });
+
+        loadGroupOptions();
+        loadLetters();
+    </script>
 </body>
+</html>

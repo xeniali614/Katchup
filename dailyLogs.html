@@ -53,9 +53,9 @@
             <div class="upload-form-container">
                 <form id="letterForm" class="upload-form">
                     <div class="form-group">
-                        <label for="letterGroup">Select Group (Optional)</label>
-                        <select id="letterGroup">
-                            <option value="">No group</option>
+                        <label for="letterGroup">Select Group</label>
+                        <select id="letterGroup" required>
+                            <option value="" disabled selected>Select a group...</option>
                         </select>
                     </div>
 
@@ -88,7 +88,7 @@
             </div>
 
             <div class="letters-container">
-                <h3>Recent Letters</h3>
+                <h3>My Recent Letters</h3>
                 <div id="lettersList" class="letters-grid">
                     <p class="empty-state">No letters yet. Write your first one!</p>
                 </div>
@@ -106,30 +106,52 @@
         const letterMessage = document.getElementById('letterMessage');
         const lettersList = document.getElementById('lettersList');
 
-        const LETTERS_KEY = 'katchup_letters';
+        async function loadLetters() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    lettersList.innerHTML = '<p class="empty-state">Please log in to view your letters</p>';
+                    return;
+                }
 
-        function loadLetters() {
-            const saved = JSON.parse(localStorage.getItem(LETTERS_KEY) || '[]');
-            if (!saved.length) {
-                lettersList.innerHTML = '<p class="empty-state">No letters yet. Write your first one!</p>';
-                return;
-            }
+                const { data: letters, error } = await supabaseClient
+                    .from('letters')
+                    .select('id, title, content, created_at, group_id, groups(name)')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
 
-            let html = '';
-            for (let letter of saved) {
-                html += `
-                    <div class="letter-card">
-                        <div class="letter-card-header">
-                            <h4>${letter.title}</h4>
-                            <span>${letter.date}</span>
+                if (error || !letters || letters.length === 0) {
+                    lettersList.innerHTML = '<p class="empty-state">No letters yet. Write your first one!</p>';
+                    return;
+                }
+
+                let html = '';
+                for (let letter of letters) {
+                    const dateText = new Date(letter.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    const groupName = letter.groups?.name || '';
+
+                    html += `
+                        <div class="letter-card">
+                            <div class="letter-card-header">
+                                <h4>${letter.title}</h4>
+                                <span>${dateText}</span>
+                            </div>
+                            ${groupName ? `<p class="letter-group">${groupName}</p>` : ''}
+                            <p class="letter-snippet">${letter.content}</p>
                         </div>
-                        ${letter.group ? `<p class="letter-group">${letter.group}</p>` : ''}
-                        <p class="letter-snippet">${letter.content}</p>
-                    </div>
-                `;
-            }
+                    `;
+                }
 
-            lettersList.innerHTML = html;
+                lettersList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading letters:', error);
+                lettersList.innerHTML = '<p class="empty-state">Error loading letters</p>';
+            }
         }
 
         async function loadGroups() {
@@ -145,9 +167,9 @@
                     .eq('user_id', user.id);
 
                 if (memberData && memberData.length > 0) {
-                    let options = '<option value="">No group</option>';
+                    let options = '<option value="" disabled selected>Select a group...</option>';
                     for (let member of memberData) {
-                        options += `<option value="${member.groups.name}">${member.groups.name}</option>`;
+                        options += `<option value="${member.groups.id}">${member.groups.name}</option>`;
                     }
                     letterGroup.innerHTML = options;
                 }
@@ -156,45 +178,62 @@
             }
         }
 
-        letterForm.addEventListener('submit', (e) => {
+        letterForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const title = document.getElementById('letterTitle').value.trim();
             const content = document.getElementById('letterContent').value.trim();
-            const group = letterGroup.value;
+            const groupId = letterGroup.value;
 
-            if (!title || !content) {
-                letterMessage.textContent = 'Please add a title and letter content.';
+            if (!title || !content || !groupId) {
+                letterMessage.textContent = 'Please select a group, add a title, and write your letter.';
                 letterMessage.className = 'message error';
                 letterMessage.style.display = 'block';
                 return;
             }
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    letterMessage.textContent = 'Please log in to save a letter.';
+                    letterMessage.className = 'message error';
+                    letterMessage.style.display = 'block';
+                    return;
+                }
 
-            const saved = JSON.parse(localStorage.getItem(LETTERS_KEY) || '[]');
-            const date = new Date().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
+                const { error } = await supabaseClient
+                    .from('letters')
+                    .insert([
+                        {
+                            user_id: user.id,
+                            group_id: groupId,
+                            title,
+                            content
+                        }
+                    ]);
 
-            saved.unshift({
-                title,
-                content,
-                group,
-                date
-            });
+                if (error) {
+                    letterMessage.textContent = 'Failed to save the letter.';
+                    letterMessage.className = 'message error';
+                    letterMessage.style.display = 'block';
+                    return;
+                }
 
-            localStorage.setItem(LETTERS_KEY, JSON.stringify(saved.slice(0, 20)));
-            letterForm.reset();
-            letterMessage.textContent = 'Letter saved locally.';
-            letterMessage.className = 'message success';
-            letterMessage.style.display = 'block';
+                letterForm.reset();
+                letterMessage.textContent = 'Letter saved.';
+                letterMessage.className = 'message success';
+                letterMessage.style.display = 'block';
 
-            setTimeout(() => {
-                letterMessage.style.display = 'none';
-            }, 2500);
+                setTimeout(() => {
+                    letterMessage.style.display = 'none';
+                }, 2500);
 
-            loadLetters();
+                loadLetters();
+            } catch (error) {
+                console.error('Error saving letter:', error);
+                letterMessage.textContent = 'An error occurred while saving.';
+                letterMessage.className = 'message error';
+                letterMessage.style.display = 'block';
+            }
         });
 
         loadGroups();
