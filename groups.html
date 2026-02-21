@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Groups - Katchup</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>Katchup</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/">
+                    <!--ADD LOGO-->
+                    <img src="assets/logo.png" alt="Katchup Logo" class="logo">
+                </a>
+                <a href="dashboard.html" class="nav-link">Home</a>
+                <a href="pictureGallery.html" class="nav-link btn-tertiary">Pictures</a>
+                <a href="letterLog.html" class="nav-link btn-tertiary">Letter Logs</a>
+                <a href="schedule.html" class="nav-link btn-tertiary">Schedule</a>
+                <button class="hamburger-btn" id="hamburger">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                <!--hamburger menu links-->
+                <ul class="hamburger-menu">
+                    <li><a href="groups.html" class="nav-link">Manage Groups</a></li>
+                    <li><a href="uploadPictures.html" class="nav-link">Upload Pictures</a></li>
+                    <li><a href="dailyLogs.html" class="nav-link btn-tertiary">Write a Letter</a></li>
+                    <li><a href="updateSchedule.html" class="nav-link btn-tertiary">Update Schedule</a></li>
+                    <li><button id="logout-btn" class="nav-link btn-tertiary" style="width: 100%; text-align: left; border: none; background: none; cursor: pointer; padding: 0.75rem 1rem;">Logout</button></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Groups Section -->
+    <section class="groups-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Manage Groups</h2>
+                <p>Create groups with friends or join existing groups to share memories together.</p>
+            </div>
+
+            <!-- Create Group Tab -->
+            <div class="groups-tabs">
+                <button class="tab-btn active" data-tab="create">Create Group</button>
+                <button class="tab-btn" data-tab="join">Join Group</button>
+                <button class="tab-btn" data-tab="my-groups">My Groups</button>
+            </div>
+
+            <!-- Create Group Form -->
+            <div id="create-tab" class="tab-content active">
+                <div class="form-card">
+                    <h3>Create a New Group</h3>
+                    <form id="createGroupForm" class="group-form">
+                        <div class="form-group">
+                            <label for="groupName">Group Name</label>
+                            <input 
+                                type="text" 
+                                id="groupName" 
+                                name="groupName" 
+                                placeholder="e.g., College Friends, Family"
+                                required
+                            >
+                        </div>
+
+                        <button type="submit" class="btn-primary btn-submit">Create Group</button>
+                    </form>
+                    <div id="createMessage" class="message"></div>
+                </div>
+            </div>
+
+            <!-- Join Group Form -->
+            <div id="join-tab" class="tab-content">
+                <div class="form-card">
+                    <h3>Join an Existing Group</h3>
+                    <form id="joinGroupForm" class="group-form">
+                        <div class="form-group">
+                            <label for="inviteCode">Invite Code</label>
+                            <input 
+                                type="text" 
+                                id="inviteCode" 
+                                name="inviteCode" 
+                                placeholder="Enter the invite code"
+                                required
+                            >
+                        </div>
+
+                        <button type="submit" class="btn-primary btn-submit">Join Group</button>
+                    </form>
+                    <div id="joinMessage" class="message"></div>
+                </div>
+            </div>
+
+            <!-- My Groups -->
+            <div id="my-groups-tab" class="tab-content">
+                <h3>Your Groups</h3>
+                <div id="groupsList" class="groups-list">
+                    <p class="empty-state">Loading groups...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+    <script>
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const createGroupForm = document.getElementById('createGroupForm');
+        const joinGroupForm = document.getElementById('joinGroupForm');
+        const createMessage = document.getElementById('createMessage');
+        const joinMessage = document.getElementById('joinMessage');
+        const groupsList = document.getElementById('groupsList');
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+
+        // Generate invite code
+        function generateInviteCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        // Create group
+        createGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const groupName = document.getElementById('groupName').value;
+
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    showMessage('Please log in first', 'error', 'create');
+                    return;
+                }
+
+                const submitBtn = createGroupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating...';
+
+                const inviteCode = generateInviteCode();
+
+                // Create group
+                const { data: groupData, error: groupError } = await supabaseClient
+                    .from('groups')
+                    .insert([
+                        {
+                            name: groupName,
+                            creator_id: user.id,
+                            invite_code: inviteCode
+                        }
+                    ])
+                    .select();
+
+                if (groupError) {
+                    showMessage('Failed to create group', 'error', 'create');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Group';
+                    return;
+                }
+
+                const groupId = groupData[0].id;
+
+                // Add creator as member
+                const { error: memberError } = await supabaseClient
+                    .from('group_members')
+                    .insert([
+                        {
+                            group_id: groupId,
+                            user_id: user.id
+                        }
+                    ]);
+
+                if (!memberError) {
+                    showMessage(`Group created! Invite code: ${inviteCode}`, 'success', 'create');
+                    createGroupForm.reset();
+                    loadGroups();
+                } else {
+                    showMessage('Group created but failed to add you as member', 'error', 'create');
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Group';
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error', 'create');
+                const submitBtn = createGroupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Group';
+            }
+        });
+
+        // Join group
+        joinGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const inviteCode = document.getElementById('inviteCode').value.toUpperCase();
+
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    showMessage('Please log in first', 'error', 'join');
+                    return;
+                }
+
+                const submitBtn = joinGroupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Joining...';
+
+                // Find group by invite code
+                const { data: groupData, error: groupError } = await supabaseClient
+                    .from('groups')
+                    .select('id, name')
+                    .eq('invite_code', inviteCode)
+                    .single();
+
+                if (groupError || !groupData) {
+                    showMessage('Invalid invite code', 'error', 'join');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Join Group';
+                    return;
+                }
+
+                // Add user to group
+                const { error: joinError } = await supabaseClient
+                    .from('group_members')
+                    .insert([
+                        {
+                            group_id: groupData.id,
+                            user_id: user.id
+                        }
+                    ]);
+
+                if (joinError) {
+                    if (joinError.message.includes('duplicate')) {
+                        showMessage('You are already a member of this group', 'error', 'join');
+                    } else {
+                        showMessage('Failed to join group', 'error', 'join');
+                    }
+                } else {
+                    showMessage(`Successfully joined ${groupData.name}!`, 'success', 'join');
+                    joinGroupForm.reset();
+                    loadGroups();
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Join Group';
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error', 'join');
+                const submitBtn = joinGroupForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Join Group';
+            }
+        });
+
+        // Load user's groups
+        async function loadGroups() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    groupsList.innerHTML = '<p class="empty-state">Please log in to see your groups</p>';
+                    return;
+                }
+
+                const { data: memberData, error: memberError } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id, groups(id, name, invite_code, creator_id)')
+                    .eq('user_id', user.id);
+
+                if (memberError || !memberData || memberData.length === 0) {
+                    groupsList.innerHTML = '<p class="empty-state">You are not in any groups yet. Create or join one!</p>';
+                    return;
+                }
+
+                let html = '';
+                for (let member of memberData) {
+                    const group = member.groups;
+                    const isCreator = group.creator_id === user.id;
+                    
+                    html += `
+                        <div class="group-card">
+                            <div class="group-header">
+                                <h4>${group.name}</h4>
+                                ${isCreator ? '<span class="badge">Creator</span>' : ''}
+                            </div>
+                            <div class="group-content">
+                                <p>Invite Code: <strong>${group.invite_code}</strong></p>
+                                <button class="btn-copy" onclick="copyToClipboard('${group.invite_code}')">Copy Code</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                groupsList.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                groupsList.innerHTML = '<p class="empty-state">Error loading groups</p>';
+            }
+        }
+
+        function showMessage(message, type, section) {
+            const messageEl = section === 'create' ? createMessage : joinMessage;
+            messageEl.textContent = message;
+            messageEl.className = 'message ' + type;
+            messageEl.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Invite code copied to clipboard!');
+            });
+        }
+
+        // Load groups on page load
+        loadGroups();
+    </script>
+</body>
+</html>

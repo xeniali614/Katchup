@@ -32,6 +32,7 @@
                 <!--hamburger menu links-->
                 <ul class="hamburger-menu">
                     <!-- TO DO: CREATE PAGES AND LINK THEM-->
+                    <li><a href="groups.html" class="nav-link">Manage Groups</a></li>
                     <li><a href="uploadPictures.html" class="nav-link">Upload Pictures</a></li>
                     <li><a href="dailyLogs.html" class="nav-link btn-tertiary">Write a Letter</a></li>
                     <li><a href="updateSchedule.html" class="nav-link btn-tertiary">Update Schedule</a></li>
@@ -52,6 +53,13 @@
             <div class="upload-form-container">
                 <form id="uploadForm" class="upload-form">
                     <div class="form-group">
+                        <label for="groupSelect">Select Group</label>
+                        <select id="groupSelect" required>
+                            <option value="">Loading your groups...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label for="pictureInput">Select Pictures</label>
                         <input 
                             type="file" 
@@ -64,11 +72,11 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="pictureDescription">Description (Optional)</label>
+                        <label for="pictureDescription">Caption (Optional)</label>
                         <textarea 
                             id="pictureDescription" 
                             name="description" 
-                            placeholder="Add a description for your pictures"
+                            placeholder="Add a caption for your pictures"
                             rows="4"
                         ></textarea>
                     </div>
@@ -90,21 +98,58 @@
 
     <script src="script.js"></script>
     <script>
-        // Initialize Supabase
         const { createClient } = window.supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const uploadForm = document.getElementById('uploadForm');
         const uploadMessage = document.getElementById('uploadMessage');
         const uploadsList = document.getElementById('uploadsList');
+        const groupSelect = document.getElementById('groupSelect');
+
+        // Load user's groups
+        async function loadGroups() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    groupSelect.innerHTML = '<option value="">Please log in</option>';
+                    return;
+                }
+
+                // Get groups user is member of
+                const { data: memberData, error: memberError } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id, groups(id, name)')
+                    .eq('user_id', user.id);
+
+                if (memberError || !memberData || memberData.length === 0) {
+                    groupSelect.innerHTML = '<option value="">No groups yet. <a href="groups.html">Create or join a group</a></option>';
+                    return;
+                }
+
+                let html = '<option value="">Select a group...</option>';
+                for (let member of memberData) {
+                    html += `<option value="${member.groups.id}">${member.groups.name}</option>`;
+                }
+                groupSelect.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                groupSelect.innerHTML = '<option value="">Error loading groups</option>';
+            }
+        }
 
         // Handle form submission
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const fileInput = document.getElementById('pictureInput');
-            const description = document.getElementById('pictureDescription').value;
+            const caption = document.getElementById('pictureDescription').value;
+            const groupId = groupSelect.value;
             const files = fileInput.files;
+
+            if (!groupId) {
+                showMessage('Please select a group', 'error');
+                return;
+            }
 
             if (files.length === 0) {
                 showMessage('Please select at least one picture', 'error');
@@ -116,7 +161,6 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Uploading...';
 
-                // Get current user
                 const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
                 if (userError || !user) {
                     showMessage('Please log in to upload pictures', 'error');
@@ -125,27 +169,67 @@
                     return;
                 }
 
+                const photoUrls = [];
                 let uploadCount = 0;
+
+                // Upload files to photos bucket
                 for (let file of files) {
-                    const fileName = `${user.id}/${Date.now()}-${file.name}`;
+                    const timestamp = Date.now();
+                    const fileName = `${timestamp}-${file.name}`;
+                    const filePath = `${groupId}/${user.id}/${fileName}`;
                     
                     const { data, error } = await supabaseClient.storage
-                        .from('pictures')
-                        .upload(fileName, file);
+                        .from('photos')
+                        .upload(filePath, file);
 
                     if (error) {
                         console.error('Upload error:', error);
-                    } else {
-                        uploadCount++;
+                        continue;
                     }
+
+                    const { data: publicUrl } = supabaseClient.storage
+                        .from('photos')
+                        .getPublicUrl(filePath);
+
+                    photoUrls.push(publicUrl.publicUrl);
+                    uploadCount++;
                 }
 
-                if (uploadCount > 0) {
+                if (uploadCount === 0) {
+                    showMessage('Failed to upload pictures', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Upload Pictures';
+                    return;
+                }
+
+                // Calculate week start date (Monday of current week)
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+                const weekStart = new Date(today.setDate(diffToMonday));
+                const weekStartDate = weekStart.toISOString().split('T')[0];
+
+                // Save to weekly_logs table
+                const { error: dbError } = await supabaseClient
+                    .from('weekly_logs')
+                    .insert([
+                        {
+                            user_id: user.id,
+                            group_id: groupId,
+                            photo_urls: photoUrls,
+                            captions: caption ? [caption] : [],
+                            week_start_date: weekStartDate,
+                            created_at: new Date().toISOString()
+                        }
+                    ]);
+
+                if (!dbError) {
                     showMessage(`Successfully uploaded ${uploadCount} picture(s)!`, 'success');
                     uploadForm.reset();
                     loadUploads();
                 } else {
-                    showMessage('Failed to upload pictures', 'error');
+                    console.error('Database error:', dbError);
+                    showMessage('Upload successful but failed to save metadata', 'error');
                 }
 
                 submitBtn.disabled = false;
@@ -163,31 +247,53 @@
             try {
                 const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
                 if (userError || !user) {
-                    uploadsList.innerHTML = '<p class="empty-state">Please log in to view your uploads</p>';
+                    uploadsList.innerHTML = '<p class="empty-state">Please log in to view uploads</p>';
                     return;
                 }
 
-                const { data, error } = await supabaseClient.storage
-                    .from('pictures')
-                    .list(user.id, { limit: 10, sortBy: { column: 'created_at', order: 'desc' } });
+                const { data, error } = await supabaseClient
+                    .from('weekly_logs')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(12);
 
-                if (error) {
-                    uploadsList.innerHTML = '<p class="empty-state">No uploads yet</p>';
-                    return;
-                }
-
-                if (data.length === 0) {
+                if (error || !data || data.length === 0) {
                     uploadsList.innerHTML = '<p class="empty-state">No uploads yet</p>';
                     return;
                 }
 
                 let html = '';
-                for (let file of data) {
-                    const fileName = file.name.split('-').pop();
-                    html += `<div class="upload-item"><p>${fileName}</p></div>`;
+                for (let log of data) {
+                    if (!log.photo_urls || log.photo_urls.length === 0) continue;
+
+                    for (let photo of log.photo_urls) {
+                        const uploadDate = new Date(log.created_at).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                        });
+                        const fileName = photo.split('/').pop().split('-').slice(1).join('-');
+
+                        html += `
+                            <div class="upload-item">
+                                <div class="upload-item-image">
+                                    <img src="${photo}" alt="${fileName}">
+                                </div>
+                                <div class="upload-item-info">
+                                    <p class="upload-item-name">${fileName}</p>
+                                    ${log.captions && log.captions[0] ? `<p class="upload-item-description">${log.captions[0]}</p>` : ''}
+                                    <div class="upload-item-meta">
+                                        <span class="upload-date">${uploadDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
                 }
-                uploadsList.innerHTML = html;
+                uploadsList.innerHTML = html || '<p class="empty-state">No uploads yet</p>';
             } catch (error) {
+                console.error('Error loading uploads:', error);
                 uploadsList.innerHTML = '<p class="empty-state">Error loading uploads</p>';
             }
         }
@@ -204,7 +310,8 @@
             }
         }
 
-        // Load uploads on page load
+        // Load groups and uploads on page load
+        loadGroups();
         loadUploads();
     </script>
 </body>
