@@ -1,0 +1,14 @@
+{
+  "name": "katchup-calendar",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "serve -l 8000",
+    "dev": "serve -l 8000 --watch",
+    "backend": "cd backend && npm run start",
+    "backend:dev": "cd backend && npm run dev"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
