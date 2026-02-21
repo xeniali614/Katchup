@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Picture Gallery - Katchup</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -41,5 +41,137 @@
             </div>
         </div>
     </nav>
+
+    <!-- Picture Gallery Section -->
+    <section class="gallery-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Picture Gallery</h2>
+                <p>View all photos from your groups</p>
+            </div>
+
+            <div class="gallery-filters">
+                <select id="groupFilter">
+                    <option value="">All Groups</option>
+                </select>
+            </div>
+
+            <div id="galleryContainer" class="gallery-grid">
+                <p class="empty-state">Loading pictures...</p>
+            </div>
+        </div>
+    </section>
+
     <script src="script.js"></script>
-</body>
+    <script>
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const galleryContainer = document.getElementById('galleryContainer');
+        const groupFilter = document.getElementById('groupFilter');
+
+        // Load user's groups for filter
+        async function loadGroupsForFilter() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) return;
+
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id, groups(id, name)')
+                    .eq('user_id', user.id);
+
+                if (memberData && memberData.length > 0) {
+                    let html = '<option value="">All Groups</option>';
+                    for (let member of memberData) {
+                        html += `<option value="${member.groups.id}">${member.groups.name}</option>`;
+                    }
+                    groupFilter.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+            }
+        }
+
+        // Load pictures
+        async function loadPictures(groupId = null) {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    galleryContainer.innerHTML = '<p class="empty-state">Please log in to view pictures</p>';
+                    return;
+                }
+
+                // Get all groups user is member of
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id')
+                    .eq('user_id', user.id);
+
+                if (!memberData || memberData.length === 0) {
+                    galleryContainer.innerHTML = '<p class="empty-state">No groups to view pictures from</p>';
+                    return;
+                }
+
+                const groupIds = memberData.map(m => m.group_id);
+
+                // Build query
+                let query = supabaseClient
+                    .from('weekly_logs')
+                    .select('*')
+                    .in('group_id', groupIds)
+                    .order('created_at', { ascending: false });
+
+                if (groupId) {
+                    query = query.eq('group_id', groupId);
+                }
+
+                const { data: logs, error } = await query;
+
+                if (error || !logs || logs.length === 0) {
+                    galleryContainer.innerHTML = '<p class="empty-state">No pictures uploaded yet</p>';
+                    return;
+                }
+
+                let html = '';
+                for (let log of logs) {
+                    if (!log.photo_urls || log.photo_urls.length === 0) continue;
+
+                    for (let photoUrl of log.photo_urls) {
+                        const uploadDate = new Date(log.created_at).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                        });
+                        const fileName = photoUrl.split('/').pop().split('-').slice(1).join('-');
+
+                        html += `
+                            <div class="gallery-item">
+                                <img src="${photoUrl}" alt="${fileName}" class="gallery-image">
+                                <div class="gallery-overlay">
+                                    <div class="gallery-info">
+                                        <p class="gallery-date">${uploadDate}</p>
+                                        ${log.captions && log.captions[0] ? `<p class="gallery-caption">${log.captions[0]}</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                galleryContainer.innerHTML = html || '<p class="empty-state">No pictures found</p>';
+            } catch (error) {
+                console.error('Error loading pictures:', error);
+                galleryContainer.innerHTML = '<p class="empty-state">Error loading pictures</p>';
+            }
+        }
+
+        // Filter change
+        groupFilter.addEventListener('change', (e) => {
+            loadPictures(e.target.value || null);
+        });
+
+        // Load on page load
+        loadGroupsForFilter();
+        loadPictures();
+    </script>
