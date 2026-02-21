@@ -128,6 +128,7 @@
         async function checkUserWeeklyUploadStatus(userId) {
             try {
                 const currentWeekStartStr = getWeekStartDate();
+                console.log('Checking status for week:', currentWeekStartStr);
 
                 const { data: thisWeekLogs, error } = await supabaseClient
                     .from('weekly_logs')
@@ -135,32 +136,52 @@
                     .eq('user_id', userId)
                     .eq('week_start_date', currentWeekStartStr);
 
-                if (error || !thisWeekLogs) {
+                if (error) {
+                    console.error('Error querying this week logs:', error);
                     return { hasRequiredPhotos: false, lastUploadWeekStart: null };
                 }
 
+                console.log('This week logs found:', thisWeekLogs);
+
                 // Count total photos uploaded this week
                 let photoCount = 0;
-                for (let log of thisWeekLogs) {
-                    if (log.photo_urls && Array.isArray(log.photo_urls)) {
-                        photoCount += log.photo_urls.length;
+                if (thisWeekLogs && thisWeekLogs.length > 0) {
+                    for (let log of thisWeekLogs) {
+                        if (log.photo_urls && Array.isArray(log.photo_urls)) {
+                            photoCount += log.photo_urls.length;
+                        }
                     }
                 }
 
+                console.log('Photo count this week:', photoCount);
+
                 if (photoCount >= 3) {
+                    console.log('User has met weekly requirement!');
                     return { hasRequiredPhotos: true, lastUploadWeekStart: null };
                 }
 
                 // Find last upload week
                 const { data: allLogs } = await supabaseClient
                     .from('weekly_logs')
-                    .select('week_start_date')
+                    .select('week_start_date, photo_urls')
                     .eq('user_id', userId)
                     .order('week_start_date', { ascending: false })
-                    .limit(1);
+                    .limit(10);
 
-                const lastUploadWeekStart = allLogs && allLogs.length > 0 ? allLogs[0].week_start_date : null;
+                console.log('All uploads:', allLogs);
 
+                let lastUploadWeekStart = null;
+                if (allLogs && allLogs.length > 0) {
+                    // Find the most recent week with uploads
+                    for (let log of allLogs) {
+                        if (log.week_start_date !== currentWeekStartStr && log.photo_urls && log.photo_urls.length > 0) {
+                            lastUploadWeekStart = log.week_start_date;
+                            break;
+                        }
+                    }
+                }
+
+                console.log('Last upload week:', lastUploadWeekStart);
                 return { hasRequiredPhotos: false, lastUploadWeekStart };
             } catch (error) {
                 console.error('Error checking upload status:', error);
