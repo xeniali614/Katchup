@@ -50,6 +50,10 @@
                 <p>Share your thoughts with your groups or keep a personal note.</p>
             </div>
 
+            <div id="userInfo" style="background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
+                <p>Logged in as: <strong id="currentUserEmail">Loading...</strong></p>
+            </div>
+
             <div class="upload-form-container">
                 <form id="letterForm" class="upload-form">
                     <div class="form-group">
@@ -105,6 +109,24 @@
         const letterGroup = document.getElementById('letterGroup');
         const letterMessage = document.getElementById('letterMessage');
         const lettersList = document.getElementById('lettersList');
+
+        // Display current user
+        async function displayCurrentUser() {
+            try {
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                const userEmailElement = document.getElementById('currentUserEmail');
+                
+                if (error || !user) {
+                    userEmailElement.textContent = 'Not logged in - please log in first';
+                    return;
+                }
+                
+                console.log('Current user writing as:', user.id, user.email);
+                userEmailElement.textContent = user.email + ' (' + user.id.substring(0, 8) + '...)';
+            } catch (error) {
+                console.error('Error getting user:', error);
+            }
+        }
 
         async function loadLetters() {
             try {
@@ -200,6 +222,12 @@
                     return;
                 }
 
+                console.log('=== LETTER BEING SAVED ===');
+                console.log('User:', user.id, user.email);
+                console.log('Group:', groupId);
+                console.log('Title:', title);
+                console.log('================================');
+
                 const { error } = await supabaseClient
                     .from('letters')
                     .insert([
@@ -218,30 +246,54 @@
                     return;
                 }
 
+                console.log('✅ Letter saved successfully');
+
                 // Create notification for group members
                 const { data: groupMembers } = await supabaseClient
                     .from('group_members')
                     .select('user_id')
                     .eq('group_id', groupId);
 
+                console.log('Group members:', groupMembers);
+
                 if (groupMembers && groupMembers.length > 0) {
+                    const recipientIds = groupMembers
+                        .filter(m => m.user_id !== user.id)
+                        .map(m => m.user_id);
+
+                    console.log('Recipient IDs for letter notification:', recipientIds);
+
                     const notificationPromises = groupMembers
                         .filter(m => m.user_id !== user.id)
-                        .map(m => supabaseClient
-                            .from('notifications')
-                            .insert([
-                                {
-                                    user_id: user.id,
-                                    user_email: user.email,
-                                    group_id: groupId,
-                                    recipient_id: m.user_id,
-                                    type: 'letter_written',
-                                    letter_title: title,
-                                    created_at: new Date().toISOString()
-                                }
-                            ]));
+                        .map(m => {
+                            console.log('Creating letter notification for:', m.user_id);
+                            return supabaseClient
+                                .from('notifications')
+                                .insert([
+                                    {
+                                        user_id: user.id,
+                                        group_id: groupId,
+                                        recipient_id: m.user_id,
+                                        type: 'letter_written',
+                                        letter_title: title,
+                                        created_at: new Date().toISOString()
+                                    }
+                                ]);
+                        });
 
-                    await Promise.all(notificationPromises);
+                    const results = await Promise.all(notificationPromises);
+                    console.log('Letter notification creation results:', results);
+                    
+                    // Check for errors in results
+                    for (let i = 0; i < results.length; i++) {
+                        if (results[i].error) {
+                            console.error('Letter notification error for recipient', i, ':', results[i].error);
+                        } else {
+                            console.log('✅ Letter notification created for recipient', i);
+                        }
+                    }
+                } else {
+                    console.log('No group members to notify');
                 }
 
                 letterForm.reset();

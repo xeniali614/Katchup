@@ -206,11 +206,15 @@
                     return;
                 }
 
+                console.log('Current user:', user.id);
+
                 // Get user's groups
                 const { data: memberData } = await supabaseClient
                     .from('group_members')
                     .select('group_id')
                     .eq('user_id', user.id);
+
+                console.log('User groups:', memberData);
 
                 if (!memberData || memberData.length === 0) {
                     notificationsList.innerHTML = '<p class="empty-state">No group notifications</p>';
@@ -218,6 +222,15 @@
                 }
 
                 const groupIds = memberData.map(m => m.group_id);
+                console.log('Group IDs:', groupIds);
+
+                // DEBUG: Check all notifications in groups (no recipient filter)
+                const { data: allNotifs } = await supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .in('group_id', groupIds)
+                    .limit(10);
+                console.log('ALL notifications in groups (no filter):', allNotifs);
 
                 // Fetch notifications for user's groups, excluding their own
                 const { data: notifications, error } = await supabaseClient
@@ -227,6 +240,9 @@
                     .eq('recipient_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(20);
+
+                console.log('Notifications query error:', error);
+                console.log('Notifications data:', notifications);
 
                 if (error) {
                     console.error('Error loading notifications:', error);
