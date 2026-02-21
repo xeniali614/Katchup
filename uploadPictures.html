@@ -49,10 +49,6 @@
                 <h2>Upload Pictures</h2>
                 <p>Share your memories by uploading pictures to your gallery.</p>
             </div>
-
-            <div id="userInfo" style="background-color: #f0f0f0; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
-                <p>Logged in as: <strong id="currentUserEmail">Loading...</strong></p>
-            </div>
             
             <div class="upload-form-container">
                 <form id="uploadForm" class="upload-form">
@@ -121,24 +117,6 @@
             return d.toISOString().split('T')[0];
         }
 
-        // Display current user
-        async function displayCurrentUser() {
-            try {
-                const { data: { user }, error } = await supabaseClient.auth.getUser();
-                const userEmailElement = document.getElementById('currentUserEmail');
-                
-                if (error || !user) {
-                    userEmailElement.textContent = 'Not logged in - please log in first';
-                    return;
-                }
-                
-                console.log('Current user uploading as:', user.id, user.email);
-                userEmailElement.textContent = user.email + ' (' + user.id.substring(0, 8) + '...)';
-            } catch (error) {
-                console.error('Error getting user:', error);
-            }
-        }
-
         // Load user's groups
         async function loadGroups() {
             try {
@@ -202,10 +180,6 @@
                     return;
                 }
 
-                console.log('=== UPLOAD STARTED ===');
-                console.log('Uploading as user:', user.id, user.email);
-                console.log('===============================');
-
                 const photoUrls = [];
                 let uploadCount = 0;
 
@@ -264,68 +238,44 @@
                         .eq('user_id', user.id)
                         .eq('week_start_date', weekStartDate);
 
-                    let totalPhotos = uploadCount; // Include the photos just uploaded
-                    if (thisWeekLogs && thisWeekLogs.length > 1) {
-                        for (let log of thisWeekLogs.slice(0, -1)) {
-                            if (log.photo_urls) totalPhotos += log.photo_urls.length;
+                    // Count photos BEFORE this upload (all except the current one)
+                    let previousPhotos = 0;
+                    if (thisWeekLogs && thisWeekLogs.length > 0) {
+                        // thisWeekLogs includes the one we just inserted, so subtract current upload
+                        for (let log of thisWeekLogs) {
+                            if (log.photo_urls) {
+                                previousPhotos += log.photo_urls.length;
+                            }
                         }
+                        previousPhotos -= uploadCount; // Remove the photos we just uploaded
                     }
 
-                    console.log('Week:', weekStartDate);
-                    console.log('This week logs:', thisWeekLogs);
-                    console.log('Total photos this week:', totalPhotos);
+                    let totalPhotos = previousPhotos + uploadCount;
 
-                    // Create notification if user just completed 3+ photos
-                    if (totalPhotos >= 3) {
-                        console.log('Creating notifications for 3+ photos');
-                        
+                    // Create notification ONLY if this upload brings them to 3+ for the FIRST time
+                    if (previousPhotos < 3 && totalPhotos >= 3) {
                         const { data: groupMembers } = await supabaseClient
                             .from('group_members')
                             .select('user_id')
                             .eq('group_id', groupId);
 
-                        console.log('Group members:', groupMembers);
-
                         if (groupMembers && groupMembers.length > 0) {
-                            const recipientIds = groupMembers
-                                .filter(m => m.user_id !== user.id)
-                                .map(m => m.user_id);
-
-                            console.log('Recipient IDs:', recipientIds);
-
                             const notificationPromises = groupMembers
                                 .filter(m => m.user_id !== user.id)
-                                .map(m => {
-                                    console.log('Creating notification for:', m.user_id);
-                                    return supabaseClient
-                                        .from('notifications')
-                                        .insert([
-                                            {
-                                                user_id: user.id,
-                                                group_id: groupId,
-                                                recipient_id: m.user_id,
-                                                type: 'photos_uploaded',
-                                                created_at: new Date().toISOString()
-                                            }
-                                        ]);
-                                });
+                                .map(m => supabaseClient
+                                    .from('notifications')
+                                    .insert([
+                                        {
+                                            user_id: user.id,
+                                            group_id: groupId,
+                                            recipient_id: m.user_id,
+                                            type: 'photos_uploaded',
+                                            created_at: new Date().toISOString()
+                                        }
+                                    ]));
 
-                            const results = await Promise.all(notificationPromises);
-                            console.log('Notification creation results:', results);
-                            
-                            // Check for errors in results
-                            for (let i = 0; i < results.length; i++) {
-                                if (results[i].error) {
-                                    console.error('Notification error for recipient', i, ':', results[i].error);
-                                } else {
-                                    console.log('Notification created successfully for recipient', i);
-                                }
-                            }
-                        } else {
-                            console.log('No group members to notify');
+                            await Promise.all(notificationPromises);
                         }
-                    } else {
-                        console.log('Not enough photos yet. Need:', 3 - totalPhotos, 'more');
                     }
 
                     showMessage(`Successfully uploaded ${uploadCount} picture(s)!`, 'success');
@@ -415,7 +365,6 @@
         }
 
         // Load groups and uploads on page load
-        displayCurrentUser();
         loadGroups();
         loadUploads();
     </script>

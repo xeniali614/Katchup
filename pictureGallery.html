@@ -128,7 +128,6 @@
         async function checkUserWeeklyUploadStatus(userId) {
             try {
                 const currentWeekStartStr = getWeekStartDate();
-                console.log('Checking status for week:', currentWeekStartStr);
 
                 const { data: thisWeekLogs, error } = await supabaseClient
                     .from('weekly_logs')
@@ -141,8 +140,6 @@
                     return { hasRequiredPhotos: false, lastUploadWeekStart: null };
                 }
 
-                console.log('This week logs found:', thisWeekLogs);
-
                 // Count total photos uploaded this week
                 let photoCount = 0;
                 if (thisWeekLogs && thisWeekLogs.length > 0) {
@@ -153,10 +150,7 @@
                     }
                 }
 
-                console.log('Photo count this week:', photoCount);
-
                 if (photoCount >= 3) {
-                    console.log('User has met weekly requirement!');
                     return { hasRequiredPhotos: true, lastUploadWeekStart: null };
                 }
 
@@ -167,8 +161,6 @@
                     .eq('user_id', userId)
                     .order('week_start_date', { ascending: false })
                     .limit(10);
-
-                console.log('All uploads:', allLogs);
 
                 let lastUploadWeekStart = null;
                 if (allLogs && allLogs.length > 0) {
@@ -181,7 +173,6 @@
                     }
                 }
 
-                console.log('Last upload week:', lastUploadWeekStart);
                 return { hasRequiredPhotos: false, lastUploadWeekStart };
             } catch (error) {
                 console.error('Error checking upload status:', error);
@@ -234,7 +225,6 @@
 
                 // Check user's upload status
                 const uploadStatus = await checkUserWeeklyUploadStatus(user.id);
-                console.log('Upload status:', uploadStatus);
                 updateStatusAlert(uploadStatus.hasRequiredPhotos, calculateDaysBehind(uploadStatus.lastUploadWeekStart));
 
                 // Get all groups user is member of
@@ -260,7 +250,6 @@
 
                 // If user hasn't met weekly requirement, restrict to their last upload week
                 if (!uploadStatus.hasRequiredPhotos && uploadStatus.lastUploadWeekStart) {
-                    console.log('Filtering to week:', uploadStatus.lastUploadWeekStart);
                     query = query.eq('week_start_date', uploadStatus.lastUploadWeekStart);
                 } else if (!uploadStatus.hasRequiredPhotos && !uploadStatus.lastUploadWeekStart) {
                     // User has never uploaded, show nothing
@@ -284,8 +273,6 @@
                     galleryContainer.innerHTML = '<p class="empty-state">No pictures available</p>';
                     return;
                 }
-
-                console.log('Loaded logs:', logs.length);
 
                 let html = '';
                 for (let log of logs) {

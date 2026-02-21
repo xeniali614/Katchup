@@ -206,15 +206,11 @@
                     return;
                 }
 
-                console.log('Current user:', user.id);
-
                 // Get user's groups
                 const { data: memberData } = await supabaseClient
                     .from('group_members')
                     .select('group_id')
                     .eq('user_id', user.id);
-
-                console.log('User groups:', memberData);
 
                 if (!memberData || memberData.length === 0) {
                     notificationsList.innerHTML = '<p class="empty-state">No group notifications</p>';
@@ -222,7 +218,6 @@
                 }
 
                 const groupIds = memberData.map(m => m.group_id);
-                console.log('Group IDs:', groupIds);
 
                 // Fetch notifications for user's groups, excluding their own
                 const { data: notifications, error } = await supabaseClient
@@ -232,9 +227,6 @@
                     .eq('recipient_id', user.id)
                     .order('created_at', { ascending: false })
                     .limit(20);
-
-                console.log('Notifications query error:', error);
-                console.log('Notifications data:', notifications);
 
                 if (error) {
                     console.error('Error loading notifications:', error);
@@ -262,7 +254,7 @@
                         users.forEach(u => userMap[u.id] = u.name);
                     }
                 } catch (e) {
-                    console.log('Users table not found, using generic names');
+                    // Users table not found, fall back to generic names
                 }
 
                 let html = '';
@@ -292,7 +284,6 @@
                 }
 
                 notificationsList.innerHTML = html;
-                console.log('Notifications displayed:', html.length > 0);
             } catch (error) {
                 console.error('Error in loadNotifications:', error);
                 notificationsList.innerHTML = '<p class="empty-state">Error loading notifications: ' + error.message + '</p>';

@@ -238,18 +238,9 @@
                                     letter_title: title,
                                     created_at: new Date().toISOString()
                                 }
-                            ])
-                        );
+                            ]));
 
-                    const results = await Promise.all(notificationPromises);
-                    console.log('Letter notification creation results:', results);
-                    
-                    // Check for errors in results
-                    for (let i = 0; i < results.length; i++) {
-                        if (results[i].error) {
-                            console.error('Letter notification error:', results[i].error);
-                        }
-                    }
+                    await Promise.all(notificationPromises);
                 }
 
                 letterForm.reset();
