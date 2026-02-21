@@ -35,9 +35,177 @@
                     <li><a href="uploadPictures.html" class="nav-link">Upload Pictures</a></li>
                     <li><a href="dailyLogs.html" class="nav-link btn-tertiary">Write a Letter</a></li>
                     <li><a href="updateSchedule.html" class="nav-link btn-tertiary">Update Schedule</a></li>
+                    <li><button id="logout-btn" class="nav-link btn-tertiary" style="width: 100%; text-align: left; border: none; background: none; cursor: pointer; padding: 0.75rem 1rem;">Logout</button></li>
                 </ul>
             </div>
         </div>
     </nav>
+
+    <!-- Upload Pictures Section -->
+    <section class="upload-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Upload Pictures</h2>
+                <p>Share your memories by uploading pictures to your gallery.</p>
+            </div>
+            
+            <div class="upload-form-container">
+                <form id="uploadForm" class="upload-form">
+                    <div class="form-group">
+                        <label for="pictureInput">Select Pictures</label>
+                        <input 
+                            type="file" 
+                            id="pictureInput" 
+                            name="pictures" 
+                            multiple 
+                            accept="image/*"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pictureDescription">Description (Optional)</label>
+                        <textarea 
+                            id="pictureDescription" 
+                            name="description" 
+                            placeholder="Add a description for your pictures"
+                            rows="4"
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-submit">Upload Pictures</button>
+                </form>
+
+                <div id="uploadMessage" class="message"></div>
+            </div>
+
+            <div class="uploads-container">
+                <h3>Recent Uploads</h3>
+                <div id="uploadsList" class="uploads-grid">
+                    <p class="empty-state">Loading uploads...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <script src="script.js"></script>
+    <script>
+        // Initialize Supabase
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadMessage = document.getElementById('uploadMessage');
+        const uploadsList = document.getElementById('uploadsList');
+
+        // Handle form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('pictureInput');
+            const description = document.getElementById('pictureDescription').value;
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                showMessage('Please select at least one picture', 'error');
+                return;
+            }
+
+            try {
+                const submitBtn = uploadForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+
+                // Get current user
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    showMessage('Please log in to upload pictures', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Upload Pictures';
+                    return;
+                }
+
+                let uploadCount = 0;
+                for (let file of files) {
+                    const fileName = `${user.id}/${Date.now()}-${file.name}`;
+                    
+                    const { data, error } = await supabaseClient.storage
+                        .from('pictures')
+                        .upload(fileName, file);
+
+                    if (error) {
+                        console.error('Upload error:', error);
+                    } else {
+                        uploadCount++;
+                    }
+                }
+
+                if (uploadCount > 0) {
+                    showMessage(`Successfully uploaded ${uploadCount} picture(s)!`, 'success');
+                    uploadForm.reset();
+                    loadUploads();
+                } else {
+                    showMessage('Failed to upload pictures', 'error');
+                }
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload Pictures';
+            } catch (error) {
+                showMessage('An error occurred: ' + error.message, 'error');
+                const submitBtn = uploadForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload Pictures';
+            }
+        });
+
+        // Load recent uploads
+        async function loadUploads() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    uploadsList.innerHTML = '<p class="empty-state">Please log in to view your uploads</p>';
+                    return;
+                }
+
+                const { data, error } = await supabaseClient.storage
+                    .from('pictures')
+                    .list(user.id, { limit: 10, sortBy: { column: 'created_at', order: 'desc' } });
+
+                if (error) {
+                    uploadsList.innerHTML = '<p class="empty-state">No uploads yet</p>';
+                    return;
+                }
+
+                if (data.length === 0) {
+                    uploadsList.innerHTML = '<p class="empty-state">No uploads yet</p>';
+                    return;
+                }
+
+                let html = '';
+                for (let file of data) {
+                    const fileName = file.name.split('-').pop();
+                    html += `<div class="upload-item"><p>${fileName}</p></div>`;
+                }
+                uploadsList.innerHTML = html;
+            } catch (error) {
+                uploadsList.innerHTML = '<p class="empty-state">Error loading uploads</p>';
+            }
+        }
+
+        function showMessage(message, type) {
+            uploadMessage.textContent = message;
+            uploadMessage.className = 'message ' + type;
+            uploadMessage.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    uploadMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Load uploads on page load
+        loadUploads();
+    </script>
 </body>
+</html>
