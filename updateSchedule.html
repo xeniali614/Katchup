@@ -278,14 +278,14 @@
                 return;
             }
 
-            const { weekStart, weekEnd } = getWeekRange();
+            const { weekStart } = getWeekRange();
+            const weekStartDate = toIsoDate(weekStart);
             const { data, error } = await supabaseClient
-                .from('meet_availability')
+                .from('availability')
                 .select('start_time')
                 .eq('group_id', availabilityGroup.value)
                 .eq('user_id', currentUser.id)
-                .gte('start_time', weekStart.toISOString())
-                .lt('start_time', weekEnd.toISOString());
+                .eq('week_start_date', weekStartDate);
 
             if (error || !data) {
                 return;
@@ -310,7 +310,7 @@
             }
 
             const { count, error } = await supabaseClient
-                .from('meet_availability')
+                .from('availability')
                 .select('id', { count: 'exact', head: true })
                 .eq('group_id', availabilityGroup.value)
                 .eq('user_id', currentUser.id);
@@ -442,7 +442,7 @@
             const rangeEnd = new Date(`${poll.end_date}T23:59:59`);
 
             const { data: availability, error } = await supabaseClient
-                .from('meet_availability')
+                .from('availability')
                 .select('user_id, start_time, end_time')
                 .eq('group_id', poll.group_id)
                 .gte('start_time', rangeStart.toISOString())
@@ -518,7 +518,8 @@
                 return;
             }
 
-            const { weekStart, weekEnd } = getWeekRange();
+            const { weekStart } = getWeekRange();
+            const weekStartDate = toIsoDate(weekStart);
             const slots = Array.from(selectedSlots).map(key => {
                 const [dayIndex, hour] = key.split('-').map(Number);
                 const start = new Date(weekStart);
@@ -529,25 +530,26 @@
                 return {
                     group_id: availabilityGroup.value,
                     user_id: currentUser.id,
+                    week_start_date: weekStartDate,
                     start_time: start.toISOString(),
                     end_time: end.toISOString()
                 };
             });
 
             await supabaseClient
-                .from('meet_availability')
+                .from('availability')
                 .delete()
                 .eq('group_id', availabilityGroup.value)
                 .eq('user_id', currentUser.id)
-                .gte('start_time', weekStart.toISOString())
-                .lt('start_time', weekEnd.toISOString());
+                .eq('week_start_date', weekStartDate);
 
             const { error } = await supabaseClient
-                .from('meet_availability')
+                .from('availability')
                 .insert(slots);
 
             if (error) {
-                showMessage(availabilityMessage, 'Failed to save availability.', 'error');
+                console.error('Availability save error:', error);
+                showMessage(availabilityMessage, `Failed to save availability: ${error.message}`, 'error');
                 return;
             }
 
