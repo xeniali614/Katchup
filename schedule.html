@@ -230,14 +230,10 @@
                 <h1>Katchup</h1>
             </div>
             <div class="navbar-menu">
-<<<<<<< Updated upstream
                 <a href="/">
                     <!--ADD LOGO-->
                     <img src="images/splat.png" alt="Katchup Logo" class="logo">
                 </a>
-=======
-                <a href="/"><img src="assets/logo.png" alt="Katchup Logo" class="logo"></a>
->>>>>>> Stashed changes
                 <a href="dashboard.html" class="nav-link">Home</a>
                 <a href="pictureGallery.html" class="nav-link btn-tertiary">Pictures</a>
                 <a href="letterLog.html" class="nav-link btn-tertiary">Letter Logs</a>
@@ -326,6 +322,7 @@
         const BACKEND_URL = 'http://localhost:3000';
         let currentDate = new Date();
         let allEvents = [];
+        let currentUserId = null;
 
         const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
@@ -340,11 +337,36 @@
         const eventForm = document.getElementById('eventForm');
         const eventDetail = document.getElementById('eventDetail');
 
+        // Initialize Supabase after the library loads
+        var scheduleSupabaseClient = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Create supabase client
+            scheduleSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            getCurrentUser().then(() => {
+                checkAuthStatus();
+            });
+        });
+
+        // Get current Supabase user
+        async function getCurrentUser() {
+            try {
+                const { data: { user } } = await scheduleSupabaseClient.auth.getUser();
+                currentUserId = user?.id;
+                console.log('Current user:', currentUserId);
+                return user;
+            } catch (error) {
+                console.error('Error getting user:', error);
+                return null;
+            }
+        }
+
         // Check auth
         async function checkAuthStatus() {
             try {
-                const response = await fetch(`${BACKEND_URL}/auth/status`, { credentials: 'include' });
+                console.log('Checking auth status for user:', currentUserId);
+                const response = await fetch(`${BACKEND_URL}/auth/status?userId=${currentUserId}`, { credentials: 'include' });
                 const data = await response.json();
+                console.log('Auth status:', data);
                 if (data.authenticated) {
                     showCalendar();
                     loadEvents();
@@ -352,12 +374,17 @@
                     showLoginPrompt();
                 }
             } catch (error) {
+                console.error('Auth check error:', error);
                 showLoginPrompt();
             }
         }
 
         connectBtn.addEventListener('click', () => {
-            window.location.href = `${BACKEND_URL}/auth/google`;
+            if (!currentUserId) {
+                alert('Please log in first to connect Google Calendar.');
+                return;
+            }
+            window.location.href = `${BACKEND_URL}/auth/google?userId=${currentUserId}`;
         });
 
         disconnectBtn.addEventListener('click', async () => {
@@ -367,16 +394,25 @@
 
         async function loadEvents() {
             try {
-                const response = await fetch(`${BACKEND_URL}/calendar/events`, { credentials: 'include' });
+                console.log('Loading events for user:', currentUserId);
+                const response = await fetch(`${BACKEND_URL}/calendar/events?userId=${currentUserId}`, { credentials: 'include' });
+                if (!response.ok) {
+                    console.error('Events API error:', response.status, response.statusText);
+                    alert('Failed to load calendar events. Try reconnecting.');
+                    return;
+                }
                 const data = await response.json();
+                console.log('Events loaded:', data.events?.length || 0, 'events');
                 allEvents = data.events || [];
                 renderCalendar();
             } catch (error) {
                 console.error('Error loading events:', error);
+                alert('Network error loading events');
             }
         }
 
         function renderCalendar() {
+            console.log('Rendering calendar with', allEvents.length, 'events');
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             const firstDay = new Date(year, month, 1).getDay();
@@ -415,6 +451,7 @@
                 const cell = createDayCell(day, true, year, month + 1);
                 calendarGrid.appendChild(cell);
             }
+            console.log('Calendar rendered with', calendarGrid.children.length, 'cells');
         }
 
         function createDayCell(day, isOtherMonth, year, month) {
@@ -471,7 +508,11 @@
                 cell.appendChild(eventsDiv);
             }
 
-            cell.onclick = () => showEventDetail(dateObj, dayEvents);
+            cell.onclick = (e) => {
+                if (!e.target.classList.contains('event-item')) {
+                    showEventDetail(dateObj, dayEvents);
+                }
+            };
 
             return cell;
         }
@@ -531,7 +572,7 @@
             if (!confirm('Delete this event?')) return;
 
             try {
-                await fetch(`${BACKEND_URL}/calendar/events/${eventId}`, {
+                await fetch(`${BACKEND_URL}/calendar/events/${eventId}?userId=${currentUserId}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -564,6 +605,7 @@
             e.preventDefault();
 
             const eventData = {
+                userId: currentUserId,
                 summary: document.getElementById('eventTitle').value,
                 start: { dateTime: new Date(document.getElementById('eventStart').value).toISOString() },
                 end: { dateTime: new Date(document.getElementById('eventEnd').value).toISOString() },
@@ -590,20 +632,24 @@
         });
 
         function showCalendar() {
+            console.log('Showing calendar section');
             calendarSection.style.display = 'block';
             loginPrompt.style.display = 'none';
             connectBtn.style.display = 'none';
             disconnectBtn.style.display = 'inline-block';
+            console.log('Calendar grid visibility:', window.getComputedStyle(calendarGrid).display);
+            console.log('Calendar grid classes:', calendarGrid.className);
         }
 
         function showLoginPrompt() {
+            console.log('Showing login prompt');
             calendarSection.style.display = 'none';
             loginPrompt.style.display = 'block';
             connectBtn.style.display = 'inline-block';
             disconnectBtn.style.display = 'none';
         }
 
-        checkAuthStatus();
+        // Initialize on page load
         setInterval(loadEvents, 30000);
     </script>
 </body>

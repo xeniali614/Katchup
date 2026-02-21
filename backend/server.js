@@ -3,11 +3,17 @@ import session from 'express-session';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { google } from 'googleapis';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Initialize Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) {
   console.warn('Missing Google OAuth environment variables. Check your .env file.');
@@ -45,7 +51,59 @@ function requireTokens(req, res, next) {
   next();
 }
 
+async function getUserTokens(userId) {
+  const { data, error } = await supabase
+    .from('google_calendar_tokens')
+    .select('access_token, refresh_token, expires_in')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expiry_date: data.expires_in
+  };
+}
+
+async function refreshTokenIfNeeded(userId, tokens) {
+  // Check if token is expired
+  if (tokens.expiry_date && tokens.expiry_date < Date.now()) {
+    const oauth2Client = getOAuthClient();
+    oauth2Client.setCredentials(tokens);
+    
+    try {
+      const { credentials } = await oauth2Client.refreshAccessToken();
+      
+      // Update tokens in Supabase
+      await supabase
+        .from('google_calendar_tokens')
+        .update({
+          access_token: credentials.access_token,
+          expires_in: credentials.expiry_date,
+          updated_at: new Date()
+        })
+        .eq('user_id', userId);
+
+      return credentials;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return null;
+    }
+  }
+
+  return tokens;
+}
+
 app.get('/auth/google', (req, res) => {
+  const { userId } = req.query;
+  if (!userId) {
+    return res.status(400).send('Missing userId parameter.');
+  }
+
   const oauth2Client = getOAuthClient();
   const scopes = [
     'https://www.googleapis.com/auth/calendar',
@@ -54,7 +112,8 @@ app.get('/auth/google', (req, res) => {
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: scopes
+    scope: scopes,
+    state: userId // Pass user ID as state for verification on callback
   });
   res.redirect(url);
 });
@@ -62,14 +121,39 @@ app.get('/auth/google', (req, res) => {
 app.get('/auth/google/callback', async (req, res) => {
   const oauth2Client = getOAuthClient();
   const code = req.query.code;
+  const userId = req.query.state;
 
   if (!code) {
     return res.status(400).send('Missing code parameter.');
   }
 
+  if (!userId) {
+    return res.status(400).send('Missing user ID in state.');
+  }
+
   try {
     const { tokens } = await oauth2Client.getToken(code);
-    req.session.tokens = tokens;
+    
+    // Store tokens in Supabase for this user
+    const { error: upsertError } = await supabase
+      .from('google_calendar_tokens')
+      .upsert({
+        user_id: userId,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_in: tokens.expiry_date,
+        updated_at: new Date()
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (upsertError) {
+      console.error('Error storing tokens:', upsertError);
+      return res.status(500).send('Failed to store authentication tokens.');
+    }
+
+    // Store user ID in session for status check
+    req.session.userId = userId;
     res.redirect(process.env.FRONTEND_REDIRECT || '/');
   } catch (error) {
     console.error('OAuth callback error:', error);
@@ -77,10 +161,26 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 });
 
-app.get('/calendar/events', requireTokens, async (req, res) => {
+app.get('/calendar/events', async (req, res) => {
+  const userId = req.query.userId || req.session.userId;
+  
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required.' });
+  }
+
   try {
+    let tokens = await getUserTokens(userId);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Not connected to Google Calendar.' });
+    }
+
+    tokens = await refreshTokenIfNeeded(userId, tokens);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Failed to refresh authorization.' });
+    }
+
     const oauth2Client = getOAuthClient();
-    oauth2Client.setCredentials(req.session.tokens);
+    oauth2Client.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const { data } = await calendar.events.list({
@@ -98,16 +198,31 @@ app.get('/calendar/events', requireTokens, async (req, res) => {
   }
 });
 
-app.post('/calendar/events', requireTokens, async (req, res) => {
+app.post('/calendar/events', async (req, res) => {
+  const userId = req.body.userId || req.query.userId || req.session.userId;
   const { summary, description, start, end } = req.body || {};
+
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required.' });
+  }
 
   if (!summary || !start || !end) {
     return res.status(400).json({ error: 'Missing summary, start, or end.' });
   }
 
   try {
+    let tokens = await getUserTokens(userId);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Not connected to Google Calendar.' });
+    }
+
+    tokens = await refreshTokenIfNeeded(userId, tokens);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Failed to refresh authorization.' });
+    }
+
     const oauth2Client = getOAuthClient();
-    oauth2Client.setCredentials(req.session.tokens);
+    oauth2Client.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const { data } = await calendar.events.insert({
@@ -127,13 +242,28 @@ app.post('/calendar/events', requireTokens, async (req, res) => {
   }
 });
 
-app.patch('/calendar/events/:id', requireTokens, async (req, res) => {
+app.patch('/calendar/events/:id', async (req, res) => {
+  const userId = req.body.userId || req.query.userId || req.session.userId;
   const { id } = req.params;
   const updates = req.body || {};
 
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required.' });
+  }
+
   try {
+    let tokens = await getUserTokens(userId);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Not connected to Google Calendar.' });
+    }
+
+    tokens = await refreshTokenIfNeeded(userId, tokens);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Failed to refresh authorization.' });
+    }
+
     const oauth2Client = getOAuthClient();
-    oauth2Client.setCredentials(req.session.tokens);
+    oauth2Client.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const { data } = await calendar.events.patch({
@@ -149,12 +279,27 @@ app.patch('/calendar/events/:id', requireTokens, async (req, res) => {
   }
 });
 
-app.delete('/calendar/events/:id', requireTokens, async (req, res) => {
+app.delete('/calendar/events/:id', async (req, res) => {
+  const userId = req.query.userId || req.session.userId;
   const { id } = req.params;
 
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required.' });
+  }
+
   try {
+    let tokens = await getUserTokens(userId);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Not connected to Google Calendar.' });
+    }
+
+    tokens = await refreshTokenIfNeeded(userId, tokens);
+    if (!tokens) {
+      return res.status(401).json({ error: 'Failed to refresh authorization.' });
+    }
+
     const oauth2Client = getOAuthClient();
-    oauth2Client.setCredentials(req.session.tokens);
+    oauth2Client.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     await calendar.events.delete({
@@ -170,12 +315,23 @@ app.delete('/calendar/events/:id', requireTokens, async (req, res) => {
 });
 
 app.post('/auth/logout', (req, res) => {
-  req.session.tokens = null;
+  req.session.userId = null;
   res.json({ success: true });
 });
 
-app.get('/auth/status', (req, res) => {
-  res.json({ authenticated: Boolean(req.session.tokens) });
+app.get('/auth/status', async (req, res) => {
+  const userId = req.query.userId || req.session.userId;
+  
+  if (!userId) {
+    return res.json({ authenticated: false });
+  }
+
+  try {
+    const tokens = await getUserTokens(userId);
+    res.json({ authenticated: !!tokens });
+  } catch (error) {
+    res.json({ authenticated: false });
+  }
 });
 
 app.listen(port, () => {
