@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Write a Letter - Katchup</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -32,12 +32,173 @@
                 <!--hamburger menu links-->
                 <ul class="hamburger-menu">
                     <!-- TO DO: CREATE PAGES AND LINK THEM-->
+                    <li><a href="groups.html" class="nav-link">Manage Groups</a></li>
                     <li><a href="uploadPictures.html" class="nav-link">Upload Pictures</a></li>
                     <li><a href="dailyLogs.html" class="nav-link btn-tertiary">Write a Letter</a></li>
                     <li><a href="updateSchedule.html" class="nav-link btn-tertiary">Update Schedule</a></li>
+                    <li><button id="logout-btn" class="nav-link btn-tertiary" style="width: 100%; text-align: left; border: none; background: none; cursor: pointer; padding: 0.75rem 1rem;">Logout</button></li>
                 </ul>
             </div>
         </div>
     </nav>
+
+    <!-- Write a Letter Section -->
+    <section class="upload-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Write a Letter</h2>
+                <p>Share your thoughts with your groups or keep a personal note.</p>
+            </div>
+
+            <div class="upload-form-container">
+                <form id="letterForm" class="upload-form">
+                    <div class="form-group">
+                        <label for="letterGroup">Select Group (Optional)</label>
+                        <select id="letterGroup">
+                            <option value="">No group</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="letterTitle">Title</label>
+                        <input
+                            type="text"
+                            id="letterTitle"
+                            name="letterTitle"
+                            placeholder="A short title for your letter"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="letterContent">Your Letter</label>
+                        <textarea
+                            id="letterContent"
+                            name="letterContent"
+                            placeholder="Write your letter here..."
+                            rows="8"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-submit">Save Letter</button>
+                </form>
+
+                <div id="letterMessage" class="message"></div>
+            </div>
+
+            <div class="letters-container">
+                <h3>Recent Letters</h3>
+                <div id="lettersList" class="letters-grid">
+                    <p class="empty-state">No letters yet. Write your first one!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <script src="script.js"></script>
+    <script>
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const letterForm = document.getElementById('letterForm');
+        const letterGroup = document.getElementById('letterGroup');
+        const letterMessage = document.getElementById('letterMessage');
+        const lettersList = document.getElementById('lettersList');
+
+        const LETTERS_KEY = 'katchup_letters';
+
+        function loadLetters() {
+            const saved = JSON.parse(localStorage.getItem(LETTERS_KEY) || '[]');
+            if (!saved.length) {
+                lettersList.innerHTML = '<p class="empty-state">No letters yet. Write your first one!</p>';
+                return;
+            }
+
+            let html = '';
+            for (let letter of saved) {
+                html += `
+                    <div class="letter-card">
+                        <div class="letter-card-header">
+                            <h4>${letter.title}</h4>
+                            <span>${letter.date}</span>
+                        </div>
+                        ${letter.group ? `<p class="letter-group">${letter.group}</p>` : ''}
+                        <p class="letter-snippet">${letter.content}</p>
+                    </div>
+                `;
+            }
+
+            lettersList.innerHTML = html;
+        }
+
+        async function loadGroups() {
+            try {
+                const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+                if (userError || !user) {
+                    return;
+                }
+
+                const { data: memberData } = await supabaseClient
+                    .from('group_members')
+                    .select('group_id, groups(id, name)')
+                    .eq('user_id', user.id);
+
+                if (memberData && memberData.length > 0) {
+                    let options = '<option value="">No group</option>';
+                    for (let member of memberData) {
+                        options += `<option value="${member.groups.name}">${member.groups.name}</option>`;
+                    }
+                    letterGroup.innerHTML = options;
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+            }
+        }
+
+        letterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('letterTitle').value.trim();
+            const content = document.getElementById('letterContent').value.trim();
+            const group = letterGroup.value;
+
+            if (!title || !content) {
+                letterMessage.textContent = 'Please add a title and letter content.';
+                letterMessage.className = 'message error';
+                letterMessage.style.display = 'block';
+                return;
+            }
+
+            const saved = JSON.parse(localStorage.getItem(LETTERS_KEY) || '[]');
+            const date = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            saved.unshift({
+                title,
+                content,
+                group,
+                date
+            });
+
+            localStorage.setItem(LETTERS_KEY, JSON.stringify(saved.slice(0, 20)));
+            letterForm.reset();
+            letterMessage.textContent = 'Letter saved locally.';
+            letterMessage.className = 'message success';
+            letterMessage.style.display = 'block';
+
+            setTimeout(() => {
+                letterMessage.style.display = 'none';
+            }, 2500);
+
+            loadLetters();
+        });
+
+        loadGroups();
+        loadLetters();
+    </script>
 </body>
+</html>

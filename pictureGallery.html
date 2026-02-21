@@ -62,6 +62,17 @@
         </div>
     </section>
 
+    <div id="lightbox" class="lightbox" aria-hidden="true">
+        <div class="lightbox-content" role="dialog" aria-modal="true">
+            <button id="lightboxClose" class="lightbox-close" aria-label="Close image">&times;</button>
+            <img id="lightboxImage" class="lightbox-image" alt="Enlarged photo">
+            <div class="lightbox-meta">
+                <p id="lightboxDate" class="lightbox-date"></p>
+                <p id="lightboxCaption" class="lightbox-caption"></p>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
     <script>
         const { createClient } = window.supabase;
@@ -69,6 +80,11 @@
 
         const galleryContainer = document.getElementById('galleryContainer');
         const groupFilter = document.getElementById('groupFilter');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        const lightboxDate = document.getElementById('lightboxDate');
+        const lightboxCaption = document.getElementById('lightboxCaption');
+        const lightboxClose = document.getElementById('lightboxClose');
 
         // Load user's groups for filter
         async function loadGroupsForFilter() {
@@ -145,13 +161,15 @@
                         });
                         const fileName = photoUrl.split('/').pop().split('-').slice(1).join('-');
 
+                        const captionText = log.captions && log.captions[0] ? log.captions[0] : '';
+
                         html += `
-                            <div class="gallery-item">
+                            <div class="gallery-item" data-photo="${photoUrl}" data-date="${uploadDate}" data-caption="${captionText}">
                                 <img src="${photoUrl}" alt="${fileName}" class="gallery-image">
                                 <div class="gallery-overlay">
                                     <div class="gallery-info">
                                         <p class="gallery-date">${uploadDate}</p>
-                                        ${log.captions && log.captions[0] ? `<p class="gallery-caption">${log.captions[0]}</p>` : ''}
+                                        ${captionText ? `<p class="gallery-caption">${captionText}</p>` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -169,6 +187,46 @@
         // Filter change
         groupFilter.addEventListener('change', (e) => {
             loadPictures(e.target.value || null);
+        });
+
+        function openLightbox(photoUrl, dateText, captionText) {
+            lightboxImage.src = photoUrl;
+            lightboxDate.textContent = dateText || '';
+            lightboxCaption.textContent = captionText || '';
+            lightbox.classList.add('open');
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('no-scroll');
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('open');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxImage.src = '';
+            document.body.classList.remove('no-scroll');
+        }
+
+        galleryContainer.addEventListener('click', (e) => {
+            const item = e.target.closest('.gallery-item');
+            if (!item) return;
+
+            const photoUrl = item.dataset.photo;
+            const dateText = item.dataset.date;
+            const captionText = item.dataset.caption;
+            openLightbox(photoUrl, dateText, captionText);
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lightbox.classList.contains('open')) {
+                closeLightbox();
+            }
         });
 
         // Load on page load
