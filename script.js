@@ -12,4 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
             hamburgerMenu.classList.toggle('active');
         });
     }
+
+    // Logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                const { createClient } = window.supabase;
+                const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+                await supabaseClient.auth.signOut();
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = 'login.html';
+            }
+        });
+    }
 });
