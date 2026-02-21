@@ -312,15 +312,27 @@
                     html += `
                         <div class="group-card">
                             <div class="group-header">
-                                <h4>${group.name}</h4>
-                                ${isCreator ? '<span class="badge">Creator</span>' : ''}
+                                <div id="name-display-${group.id}" class="group-name-display">
+                                    <h4>${group.name}</h4>
+                                    ${isCreator ? '<span class="badge">Creator</span>' : ''}
+                                </div>
+                                <div id="name-edit-${group.id}" class="group-name-edit" style="display: none;">
+                                    <input type="text" id="edit-input-${group.id}" class="group-name-input" value="${group.name}" />
+                                </div>
                             </div>
                             <div class="group-content">
                                 <p>Invite Code: <strong>${group.invite_code}</strong></p>
                                 <button class="btn-copy" onclick="copyToClipboard('${group.invite_code}')">Copy Code</button>
                                 ${membersHtml}
                                 <div class="group-actions">
-                                    ${isCreator ? `<button class="btn-danger" onclick="deleteGroup('${group.id}', '${group.name}')">Delete Group</button>` : ''}
+                                    ${isCreator ? `
+                                        <button class="btn-secondary" onclick="toggleEditGroupName('${group.id}')">Edit Name</button>
+                                        <div id="edit-actions-${group.id}" style="display: none; gap: 0.5rem;">
+                                            <button class="btn-primary" onclick="saveGroupName('${group.id}')">Save</button>
+                                            <button class="btn-secondary" onclick="cancelEditGroupName('${group.id}')">Cancel</button>
+                                        </div>
+                                        <button class="btn-danger" onclick="deleteGroup('${group.id}', '${group.name}')">Delete Group</button>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -387,6 +399,66 @@
             navigator.clipboard.writeText(text).then(() => {
                 alert('Invite code copied to clipboard!');
             });
+        }
+
+        // Toggle edit group name
+        function toggleEditGroupName(groupId) {
+            const displayDiv = document.getElementById(`name-display-${groupId}`);
+            const editDiv = document.getElementById(`name-edit-${groupId}`);
+            const actionsDiv = document.getElementById(`edit-actions-${groupId}`);
+            const editButton = event.target;
+
+            if (editDiv.style.display === 'none') {
+                // Show edit mode
+                displayDiv.style.display = 'none';
+                editDiv.style.display = 'block';
+                actionsDiv.style.display = 'flex';
+                editButton.style.display = 'none';
+                document.getElementById(`edit-input-${groupId}`).focus();
+                document.getElementById(`edit-input-${groupId}`).select();
+            }
+        }
+
+        // Cancel edit group name
+        function cancelEditGroupName(groupId) {
+            const displayDiv = document.getElementById(`name-display-${groupId}`);
+            const editDiv = document.getElementById(`name-edit-${groupId}`);
+            const actionsDiv = document.getElementById(`edit-actions-${groupId}`);
+            const editButton = document.querySelector(`button[onclick="toggleEditGroupName('${groupId}')"]`);
+
+            displayDiv.style.display = 'block';
+            editDiv.style.display = 'none';
+            actionsDiv.style.display = 'none';
+            editButton.style.display = 'block';
+        }
+
+        // Save group name
+        async function saveGroupName(groupId) {
+            const newName = document.getElementById(`edit-input-${groupId}`).value.trim();
+
+            if (!newName) {
+                alert('Group name cannot be empty');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('groups')
+                    .update({ name: newName })
+                    .eq('id', groupId);
+
+                if (error) {
+                    alert('Failed to update group name');
+                    console.error('Error:', error);
+                    return;
+                }
+
+                alert('Group name updated successfully!');
+                loadGroups();
+            } catch (error) {
+                console.error('Error updating group name:', error);
+                alert('An error occurred while updating the group name');
+            }
         }
 
         // Load groups on page load
