@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <h1>Katchup</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="/">
+                    <!--ADD LOGO-->
+                    <img src="assets/logo.png" alt="Katchup Logo" class="logo">
+                </a>
+                <a href="dashboard.html" class="nav-link">Home</a>
+                <a href="pictureGallery.html" class="nav-link btn-tertiary">Pictures</a>
+                <a href="letterLog.html" class="nav-link btn-tertiary">Letter Logs</a>
+                <a href="schedule.html" class="nav-link btn-tertiary">Schedule</a>
+                <button class="hamburger-btn" id="hamburger">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                <!--hamburger menu links-->
+                <ul class="hamburger-menu">
+                    <!-- TO DO: CREATE PAGES AND LINK THEM-->
+                    <li><a href="uploadPictures.html" class="nav-link">Upload Pictures</a></li>
+                    <li><a href="dailyLogs.html" class="nav-link btn-tertiary">Write a Letter</a></li>
+                    <li><a href="updateSchedule.html" class="nav-link btn-tertiary">Update Schedule</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <script src="script.js"></script>
+</body>
