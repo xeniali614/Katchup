@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "katchup-calendar",
   "version": "1.0.0",
   "private": true,
@@ -12,26 +11,4 @@
   "devDependencies": {
     "serve": "^14.2.0"
   }
-=======
-  "name": "katchup",
-  "version": "1.0.0",
-  "description": "1. In `backend/.env`, set Google + Supabase keys and keep these local URLs:\r    - `GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback`\r    - `FRONTEND_ORIGIN=http://localhost:3000`\r    - `FRONTEND_REDIRECT=http://localhost:3000/schedule.html`\r 2. Start backend:\r    - `cd backend`\r    - `npm install`\r    - `npm run dev`\r 3. Open `http://localhost:3000/schedule.html`.",
-  "main": "config.js",
-  "scripts": {
-    "start": "live-server",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xeniali614/Katchup.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/xeniali614/Katchup/issues"
-  },
-  "homepage": "https://github.com/xeniali614/Katchup#readme"
->>>>>>> af177915c743ef1c8b506a405a59e5d5c1564244
 }
