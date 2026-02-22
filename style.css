@@ -71,8 +71,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar-brand .logo {
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
     object-fit: contain;
 }
 
@@ -371,6 +371,19 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 1px;
 }
 
+.footer .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.footer-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .navbar .container {
@@ -427,6 +440,15 @@ h1, h2, h3, h4, h5, h6 {
 
     .features-grid {
         grid-template-columns: 1fr;
+    }
+
+    .footer .container {
+        gap: 0.5rem;
+    }
+
+    .footer-logo {
+        width: 48px;
+        height: 48px;
     }
 }
 
