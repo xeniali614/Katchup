@@ -131,6 +131,11 @@
                     <button id="suggestBtn" class="btn-primary" type="button">Suggest Times</button>
                 </div>
                 <div id="suggestionsList" class="meet-list-body"></div>
+                <div id="suggestionsPager" class="meet-actions" style="display: none; margin-top: 10px; gap: 10px; align-items: center;">
+                    <button id="suggestionsPrevBtn" class="btn-secondary" type="button">Previous</button>
+                    <span id="suggestionsPageInfo" class="meet-hint" style="align-self: center;"></span>
+                    <button id="suggestionsNextBtn" class="btn-secondary" type="button">Next</button>
+                </div>
             </section>
         </div>
     </main>
@@ -170,6 +175,10 @@
         const pollGateDismiss = pollGate ? pollGate.querySelector('.poll-gate-dismiss') : null;
         const suggestBtn = document.getElementById('suggestBtn');
         const suggestionsList = document.getElementById('suggestionsList');
+        const suggestionsPager = document.getElementById('suggestionsPager');
+        const suggestionsPrevBtn = document.getElementById('suggestionsPrevBtn');
+        const suggestionsNextBtn = document.getElementById('suggestionsNextBtn');
+        const suggestionsPageInfo = document.getElementById('suggestionsPageInfo');
         const pollOwnerActions = document.getElementById('pollOwnerActions');
         const unfinalizePollBtn = document.getElementById('unfinalizePollBtn');
         const deletePollBtn = document.getElementById('deletePollBtn');
@@ -186,6 +195,10 @@
         let pollsCache = {};
         let selectedSlots = new Set();
         let pollsLocked = true;
+        let suggestionSlotsCache = [];
+        let suggestionMetaCache = { pollId: null, memberCount: 0, voteMap: new Map(), userVoteKeys: new Set(), finalKey: null, isCreator: false };
+        let suggestionsPage = 1;
+        const SUGGESTIONS_PAGE_SIZE = 5;
 
         async function getCurrentUser() {
             const { data: { user } } = await supabaseClient.auth.getUser();
@@ -995,10 +1008,61 @@
             });
         }
 
+        function renderSuggestionsPage() {
+            const total = suggestionSlotsCache.length;
+            if (total === 0) {
+                suggestionsPager.style.display = 'none';
+                suggestionsList.innerHTML = '<p class="empty-state">No suggested times that fit your calendar.</p>';
+                return;
+            }
+
+            const totalPages = Math.max(1, Math.ceil(total / SUGGESTIONS_PAGE_SIZE));
+            suggestionsPage = Math.min(Math.max(1, suggestionsPage), totalPages);
+
+            const startIndex = (suggestionsPage - 1) * SUGGESTIONS_PAGE_SIZE;
+            const pageSlots = suggestionSlotsCache.slice(startIndex, startIndex + SUGGESTIONS_PAGE_SIZE);
+
+            const { pollId, memberCount, voteMap, userVoteKeys, finalKey, isCreator } = suggestionMetaCache;
+
+            suggestionsList.innerHTML = pageSlots.map(slot => {
+                const startIso = slot.start.toISOString();
+                const endIso = slot.end.toISOString();
+                const key = buildVoteKey(startIso, endIso);
+                const votesForSlot = voteMap.get(key)?.size || 0;
+                const isUserChoice = userVoteKeys.has(key);
+                const isFinal = finalKey === key;
+                const voteLabel = isUserChoice ? 'Opted In' : 'Opt In';
+                const voteDisabled = isFinal ? 'disabled' : '';
+                const finalizeDisabled = isFinal || finalKey ? 'disabled' : '';
+
+                return `
+                    <div class="meet-slot">
+                        <div>${slot.start.toLocaleString()}</div>
+                        <div>${slot.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <span class="meet-badge">${votesForSlot}/${memberCount || '?'} opted in</span>
+                        ${isFinal ? '<span class="meet-badge">Final</span>' : ''}
+                        <div class="meet-actions">
+                            <button type="button" class="btn-secondary" data-action="vote" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${voteDisabled}>${voteLabel}</button>
+                            ${isCreator ? `<button type="button" class="btn-primary" data-action="finalize" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${finalizeDisabled}>Finalize</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            suggestionsPager.style.display = totalPages > 1 ? 'flex' : 'none';
+            suggestionsPageInfo.textContent = `Page ${suggestionsPage} of ${totalPages}`;
+            suggestionsPrevBtn.disabled = suggestionsPage <= 1;
+            suggestionsNextBtn.disabled = suggestionsPage >= totalPages;
+        }
+
         async function suggestTimes() {
             const pollId = pollSelect.value;
             const poll = pollsCache[pollId];
+            suggestionsPage = 1;
             suggestionsList.innerHTML = '';
+            suggestionsPager.style.display = 'none';
+            suggestionSlotsCache = [];
+            suggestionMetaCache = { pollId: null, memberCount: 0, voteMap: new Map(), userVoteKeys: new Set(), finalKey: null, isCreator: false };
 
             if (!pollId || !poll) {
                 suggestionsList.innerHTML = '<p class="empty-state">Select a poll to see suggestions.</p>';
@@ -1061,8 +1125,7 @@
                     };
                 })
                 .filter(slot => slot.availableForYou)
-                .sort((a, b) => b.count - a.count || a.start - b.start)
-                .slice(0, 5);
+                .sort((a, b) => b.count - a.count || a.start - b.start);
 
             if (suggestions.length === 0) {
                 suggestionsList.innerHTML = '<p class="empty-state">No suggested times that fit your calendar.</p>';
@@ -1074,30 +1137,9 @@
             const finalKey = finalRow ? buildVoteKey(finalRow.start_time, finalRow.end_time) : null;
             const isCreator = poll.created_by === currentUser?.id;
 
-            suggestionsList.innerHTML = suggestions.map(slot => {
-                const startIso = slot.start.toISOString();
-                const endIso = slot.end.toISOString();
-                const key = buildVoteKey(startIso, endIso);
-                const votesForSlot = voteMap.get(key)?.size || 0;
-                const isUserChoice = userVoteKeys.has(key);
-                const isFinal = finalKey === key;
-                const voteLabel = isUserChoice ? 'Opted In' : 'Opt In';
-                const voteDisabled = isFinal ? 'disabled' : '';
-                const finalizeDisabled = isFinal || finalKey ? 'disabled' : '';
-
-                return `
-                    <div class="meet-slot">
-                        <div>${slot.start.toLocaleString()}</div>
-                        <div>${slot.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <span class="meet-badge">${votesForSlot}/${memberCount || '?'} opted in</span>
-                        ${isFinal ? '<span class="meet-badge">Final</span>' : ''}
-                        <div class="meet-actions">
-                            <button type="button" class="btn-secondary" data-action="vote" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${voteDisabled}>${voteLabel}</button>
-                            ${isCreator ? `<button type="button" class="btn-primary" data-action="finalize" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${finalizeDisabled}>Finalize</button>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            suggestionSlotsCache = suggestions;
+            suggestionMetaCache = { pollId, memberCount, voteMap, userVoteKeys, finalKey, isCreator };
+            renderSuggestionsPage();
         }
 
         async function saveAvailability() {
@@ -1279,6 +1321,14 @@
 
         saveAvailabilityBtn.addEventListener('click', saveAvailability);
         suggestBtn.addEventListener('click', suggestTimes);
+        suggestionsPrevBtn.addEventListener('click', () => {
+            suggestionsPage -= 1;
+            renderSuggestionsPage();
+        });
+        suggestionsNextBtn.addEventListener('click', () => {
+            suggestionsPage += 1;
+            renderSuggestionsPage();
+        });
 
         document.addEventListener('DOMContentLoaded', async () => {
             availabilityWeek.value = toIsoDate(new Date());
