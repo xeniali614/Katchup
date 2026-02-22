@@ -98,7 +98,7 @@
                 </div>
                 <div id="pollOwnerActions" class="meet-actions" style="display: none;">
                     <button id="unfinalizePollBtn" type="button" class="btn-secondary">Unfinalize</button>
-                    <button id="deletePollBtn" type="button" class="btn-secondary">Delete Poll</button>
+                    <button id="deletePollBtn" type="button" class="btn-secondary" style="margin-left: 10px;">Delete Poll</button>
                 </div>
                 <form id="pollForm" class="meet-form">
                     <div class="form-group">
@@ -1156,6 +1156,7 @@
             showMessage(availabilityMessage, 'Availability saved!', 'success');
             await checkAvailabilityGate();
             await loadPolls(availabilityGroup.value);
+            await suggestTimes();
         }
 
         pollForm.addEventListener('submit', async (e) => {
@@ -1208,6 +1209,10 @@
             await loadPolls(availabilityGroup.value);
             if (newPoll) {
                 await createPollNotifications(newPoll);
+                pollSelect.value = newPoll.id;
+                pollsCache[newPoll.id] = newPoll;
+                await refreshPollOwnerActions();
+                await suggestTimes();
             }
         });
 
@@ -1257,11 +1262,14 @@
             await checkAvailabilityGate();
             await loadAvailabilityForWeek();
             await loadPolls(availabilityGroup.value);
+            await refreshPollOwnerActions();
+            await suggestTimes();
         });
 
         availabilityWeek.addEventListener('change', async () => {
             buildAvailabilityGrid();
             await loadAvailabilityForWeek();
+            await suggestTimes();
         });
 
         clearAvailabilityBtn.addEventListener('click', () => {

@@ -87,6 +87,21 @@
         const lightboxCaption = document.getElementById('lightboxCaption');
         const lightboxClose = document.getElementById('lightboxClose');
 
+        let groupNameById = {};
+
+        async function getUnlockedGroupIds(userId) {
+            const { data, error } = await supabaseClient
+                .from('weekly_logs')
+                .select('group_id')
+                .eq('user_id', userId);
+
+            if (error || !data) {
+                return [];
+            }
+
+            return [...new Set(data.map(row => row.group_id).filter(Boolean))];
+        }
+
         // Load user's groups for filter
         async function loadGroupsForFilter() {
             try {
@@ -100,9 +115,14 @@
 
                 if (memberData && memberData.length > 0) {
                     let html = '<option value="">All Groups</option>';
+                    groupNameById = {};
+
                     for (let member of memberData) {
+                        if (!member.groups?.id) continue;
+                        groupNameById[member.groups.id] = member.groups.name;
                         html += `<option value="${member.groups.id}">${member.groups.name}</option>`;
                     }
+
                     groupFilter.innerHTML = html;
                 }
             } catch (error) {
@@ -122,15 +142,21 @@
         }
 
         // Check if user has uploaded 3+ photos this week
-        async function checkUserWeeklyUploadStatus(userId) {
+        async function checkUserWeeklyUploadStatus(userId, groupId = null) {
             try {
                 const currentWeekStartStr = getWeekStartDate();
 
-                const { data: thisWeekLogs, error } = await supabaseClient
+                let thisWeekQuery = supabaseClient
                     .from('weekly_logs')
                     .select('photo_urls')
                     .eq('user_id', userId)
                     .eq('week_start_date', currentWeekStartStr);
+
+                if (groupId) {
+                    thisWeekQuery = thisWeekQuery.eq('group_id', groupId);
+                }
+
+                const { data: thisWeekLogs, error } = await thisWeekQuery;
 
                 if (error) {
                     console.error('Error querying this week logs:', error);
@@ -152,12 +178,18 @@
                 }
 
                 // Find last upload week
-                const { data: allLogs } = await supabaseClient
+                let allLogsQuery = supabaseClient
                     .from('weekly_logs')
                     .select('week_start_date, photo_urls')
                     .eq('user_id', userId)
                     .order('week_start_date', { ascending: false })
                     .limit(10);
+
+                if (groupId) {
+                    allLogsQuery = allLogsQuery.eq('group_id', groupId);
+                }
+
+                const { data: allLogs } = await allLogsQuery;
 
                 let lastUploadWeekStart = null;
                 if (allLogs && allLogs.length > 0) {
@@ -192,7 +224,7 @@
         }
 
         // Update status alert
-        function updateStatusAlert(hasRequiredPhotos, daysBehind) {
+        function updateStatusAlert(hasRequiredPhotos, daysBehind, groupName = null) {
             const alert = document.getElementById('uploadStatusAlert');
             const message = document.getElementById('uploadStatusMessage');
 
@@ -201,12 +233,20 @@
             } else if (daysBehind !== null) {
                 alert.classList.remove('success');
                 alert.classList.add('warning');
-                message.textContent = `You are ${daysBehind} days behind on your weekly photo uploads. Upload 3 photos this week to see all group photos!`;
+                if (groupName) {
+                    message.textContent = `You are ${daysBehind} days behind in ${groupName}. Upload 3 photos there this week to unlock that group gallery.`;
+                } else {
+                    message.textContent = `You are ${daysBehind} days behind on your weekly photo uploads. Upload 3 photos this week to see all group photos!`;
+                }
                 alert.style.display = 'block';
             } else {
                 alert.classList.remove('success');
                 alert.classList.add('warning');
-                message.textContent = 'Upload 3 photos this week to see all group photos!';
+                if (groupName) {
+                    message.textContent = `Upload 3 photos in ${groupName} this week to unlock that group gallery.`;
+                } else {
+                    message.textContent = 'Upload 3 photos this week to see all group photos!';
+                }
                 alert.style.display = 'block';
             }
         }
@@ -220,10 +260,6 @@
                     return;
                 }
 
-                // Check user's upload status
-                const uploadStatus = await checkUserWeeklyUploadStatus(user.id);
-                updateStatusAlert(uploadStatus.hasRequiredPhotos, calculateDaysBehind(uploadStatus.lastUploadWeekStart));
-
                 // Get all groups user is member of
                 const { data: memberData } = await supabaseClient
                     .from('group_members')
@@ -236,23 +272,32 @@
                 }
 
                 const groupIds = memberData.map(m => m.group_id);
+                const unlockedGroupIds = await getUnlockedGroupIds(user.id);
+                const accessibleGroupIds = groupIds.filter(id => unlockedGroupIds.includes(id));
+
+                if (accessibleGroupIds.length === 0) {
+                    updateStatusAlert(false, null);
+                    galleryContainer.innerHTML = '<p class="empty-state">Upload photos in a group to unlock its gallery.</p>';
+                    return;
+                }
+
+                if (groupId && !accessibleGroupIds.includes(groupId)) {
+                    const lockedStatus = await checkUserWeeklyUploadStatus(user.id, groupId);
+                    const daysBehind = calculateDaysBehind(lockedStatus.lastUploadWeekStart);
+                    updateStatusAlert(false, daysBehind, groupNameById[groupId] || 'this group');
+                    galleryContainer.innerHTML = '<p class="empty-state">Upload photos to this group first to view its gallery.</p>';
+                    return;
+                }
+
+                updateStatusAlert(true, null);
 
                 // Build query
                 let query = supabaseClient
                     .from('weekly_logs')
                     .select('*')
-                    .in('group_id', groupIds)
+                    .in('group_id', accessibleGroupIds)
                     .order('week_start_date', { ascending: false })
                     .order('created_at', { ascending: false });
-
-                // If user hasn't met weekly requirement, restrict to their last upload week
-                if (!uploadStatus.hasRequiredPhotos && uploadStatus.lastUploadWeekStart) {
-                    query = query.eq('week_start_date', uploadStatus.lastUploadWeekStart);
-                } else if (!uploadStatus.hasRequiredPhotos && !uploadStatus.lastUploadWeekStart) {
-                    // User has never uploaded, show nothing
-                    galleryContainer.innerHTML = '<p class="empty-state">Upload 3 photos this week to view group photos</p>';
-                    return;
-                }
 
                 if (groupId) {
                     query = query.eq('group_id', groupId);
