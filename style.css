@@ -444,6 +444,11 @@ h1, h2, h3, h4, h5, h6 {
     font-family: inherit;
 }
 
+.hamburger-menu #logout-btn:hover,
+.hamburger-menu #logout-btn:focus-visible {
+    color: var(--bg-light);
+}
+
 .hamburger-menu a:hover {
     background-color: var(--primary-color);
     color: var(--bg-light);

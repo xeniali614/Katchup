@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Logout functionality
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
+        logoutBtn.addEventListener('click', async (event) => {
+            event.preventDefault();
             try {
                 const { createClient } = window.supabase;
                 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
