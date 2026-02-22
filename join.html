@@ -101,7 +101,7 @@
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const fullName = document.getElementById('fullName').value;
+            const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
@@ -129,7 +129,7 @@
                     email: email,
                     password: password,
                     options: {
-                        data: { full_name: fullName }
+                        data: { username }
                     }
                 });
 
@@ -140,9 +140,25 @@
                     return;
                 }
 
-                // Store user profile in profiles table
-            showMessage('Account created successfully! Redirecting...', 'success');
-            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
+                if (authData?.user?.id) {
+                    const { error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .upsert({
+                            id: authData.user.id,
+                            username,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+
+                    if (profileError) {
+                        showMessage('Account created, but failed to save profile: ' + profileError.message, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Create Account';
+                        return;
+                    }
+                }
+
+                showMessage('Account created successfully! Redirecting...', 'success');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
@@ -168,11 +184,32 @@
         }
     </script>
 
-    <!-- Footer -->
+<!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2026 Katchup. All rights reserved.</p>
+            <p>dorm floor productions™</p>
+            <img src="images/splat final animation.gif" alt="Splat" class="footer-logo">
         </div>
     </footer>
+
+    <script>
+        // Smooth scrolling for navigation links with navbar offset
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                const nav = document.querySelector('.navbar');
+                if (target) {
+                    const navHeight = nav ? nav.offsetHeight : 0;
+                    const targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({
+                        top: Math.max(targetTop - navHeight - 10, 0),
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
+
