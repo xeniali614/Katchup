@@ -302,6 +302,7 @@
                         <input type="checkbox" id="allDayCheckbox"> All Day Event
                     </label>
                 </div>
+                <!-- Timed Event Inputs -->
                 <div class="form-group" id="startTimeGroup">
                     <label for="eventStart">Start Date & Time</label>
                     <input type="datetime-local" id="eventStart" required>
@@ -310,6 +311,16 @@
                     <label for="eventEnd">End Date & Time</label>
                     <input type="datetime-local" id="eventEnd" required>
                     <small style="display: block; color: #666; margin-top: 5px;">Dates don't have to match - event will span multiple days</small>
+                </div>
+                <!-- All Day Event Inputs -->
+                <div class="form-group" id="startDateGroup" style="display: none;">
+                    <label for="eventStartDate">Start Date</label>
+                    <input type="date" id="eventStartDate">
+                </div>
+                <div class="form-group" id="endDateGroup" style="display: none;">
+                    <label for="eventEndDate">End Date</label>
+                    <input type="date" id="eventEndDate">
+                    <small style="display: block; color: #666; margin-top: 5px;">Leave blank for single-day event</small>
                 </div>
                 <div class="form-group">
                     <label for="eventDescription">Description (optional)</label>
@@ -345,23 +356,33 @@
         const allDayCheckbox = document.getElementById('allDayCheckbox');
         const eventStartInput = document.getElementById('eventStart');
         const eventEndInput = document.getElementById('eventEnd');
+        const eventStartDateInput = document.getElementById('eventStartDate');
+        const eventEndDateInput = document.getElementById('eventEndDate');
         const startTimeGroup = document.getElementById('startTimeGroup');
         const endTimeGroup = document.getElementById('endTimeGroup');
+        const startDateGroup = document.getElementById('startDateGroup');
+        const endDateGroup = document.getElementById('endDateGroup');
 
         // Handle all-day event checkbox toggle
         allDayCheckbox.addEventListener('change', () => {
             if (allDayCheckbox.checked) {
-                // Hide time inputs for all-day events
+                // Show date inputs, hide time inputs for all-day events
                 startTimeGroup.style.display = 'none';
                 endTimeGroup.style.display = 'none';
+                startDateGroup.style.display = 'block';
+                endDateGroup.style.display = 'block';
                 eventStartInput.removeAttribute('required');
                 eventEndInput.removeAttribute('required');
+                eventStartDateInput.setAttribute('required', 'required');
             } else {
-                // Show time inputs for timed events
+                // Show time inputs, hide date inputs for timed events
                 startTimeGroup.style.display = 'block';
                 endTimeGroup.style.display = 'block';
+                startDateGroup.style.display = 'none';
+                endDateGroup.style.display = 'none';
                 eventStartInput.setAttribute('required', 'required');
                 eventEndInput.setAttribute('required', 'required');
+                eventStartDateInput.removeAttribute('required');
             }
         });
 
@@ -615,35 +636,37 @@
             let startStr = event.start.dateTime || event.start.date;
             let endStr = event.end.dateTime || event.end.date;
 
-            let startDisplay = startStr;
-            let endDisplay = endStr;
-
-            // For all-day events, Google Calendar stores exclusive end dates
-            // So subtract 1 day from the end date to show the correct "last day"
-            if (isAllDay) {
-                const endDate = new Date(endStr + 'T00:00:00');
-                endDate.setDate(endDate.getDate() - 1);
-                endDisplay = endDate.toISOString().split('T')[0];
-            } else {
-                // For timed events, use just the datetime part (without timezone)
-                // Format: "YYYY-MM-DDTHH:mm:00" -> "YYYY-MM-DDTHH:mm"
-                startDisplay = startStr.slice(0, 16);
-                endDisplay = endStr.slice(0, 16);
-            }
-
             document.getElementById('eventTitle').value = event.summary;
-            document.getElementById('eventStart').value = startDisplay;
-            document.getElementById('eventEnd').value = endDisplay;
             document.getElementById('eventDescription').value = event.description || '';
             document.getElementById('allDayCheckbox').checked = isAllDay;
             
-            // Show/hide time inputs based on event type
             if (isAllDay) {
+                // For all-day events, Google Calendar stores exclusive end dates
+                // So subtract 1 day from the end date to show the correct "last day"
+                const endDate = new Date(endStr + 'T00:00:00');
+                endDate.setDate(endDate.getDate() - 1);
+                const endDisplay = endDate.toISOString().split('T')[0];
+                
+                document.getElementById('eventStartDate').value = startStr;
+                document.getElementById('eventEndDate').value = endDisplay;
+                
                 startTimeGroup.style.display = 'none';
                 endTimeGroup.style.display = 'none';
+                startDateGroup.style.display = 'block';
+                endDateGroup.style.display = 'block';
             } else {
+                // For timed events, use just the datetime part (without timezone)
+                // Format: "YYYY-MM-DDTHH:mm:00" -> "YYYY-MM-DDTHH:mm"
+                const startDisplay = startStr.slice(0, 16);
+                const endDisplay = endStr.slice(0, 16);
+                
+                document.getElementById('eventStart').value = startDisplay;
+                document.getElementById('eventEnd').value = endDisplay;
+                
                 startTimeGroup.style.display = 'block';
                 endTimeGroup.style.display = 'block';
+                startDateGroup.style.display = 'none';
+                endDateGroup.style.display = 'none';
             }
 
             document.getElementById('modalTitle').textContent = 'Edit Event';
@@ -681,11 +704,15 @@
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventStart').value = '';
             document.getElementById('eventEnd').value = '';
+            document.getElementById('eventStartDate').value = '';
+            document.getElementById('eventEndDate').value = '';
             document.getElementById('eventDescription').value = '';
             document.getElementById('allDayCheckbox').checked = false;
             // Show time inputs since all-day is unchecked
             startTimeGroup.style.display = 'block';
             endTimeGroup.style.display = 'block';
+            startDateGroup.style.display = 'none';
+            endDateGroup.style.display = 'none';
             delete eventForm.dataset.eventId;
             eventModal.style.display = 'flex';
         });
@@ -704,26 +731,22 @@
             let start, end;
 
             if (isAllDay) {
-                // For all-day events, use today and tomorrow if times aren't filled
-                const startVal = document.getElementById('eventStart').value;
-                const endVal = document.getElementById('eventEnd').value;
+                // For all-day events, use the date inputs
+                const startVal = document.getElementById('eventStartDate').value;
+                const endVal = document.getElementById('eventEndDate').value;
                 
-                if (startVal) {
-                    start = new Date(startVal);
-                } else {
-                    start = new Date();
+                if (!startVal) {
+                    alert('Start date is required for all-day events');
+                    return;
                 }
                 
-                if (endVal) {
-                    end = new Date(endVal);
-                } else {
-                    // Default end date is same day for all-day events
-                    end = new Date(start);
-                }
+                start = startVal;
+                // If no end date specified, default to same day
+                end = endVal || startVal;
                 
-                // Ensure end is after start
-                if (end < start) {
-                    end = new Date(start);
+                // Ensure end is not before start
+                if (new Date(end) < new Date(start)) {
+                    end = start;
                 }
             } else {
                 const startVal = document.getElementById('eventStart').value;
@@ -747,14 +770,11 @@
             };
 
             if (isAllDay) {
-                // For all-day events, extract just the date part
-                const startDate = typeof start === 'string' ? start.split('T')[0] : start.toISOString().split('T')[0];
-                const endDate = typeof end === 'string' ? end.split('T')[0] : end.toISOString().split('T')[0];
-                
-                eventData.start = { date: startDate };
+                // For all-day events, start and end are already in YYYY-MM-DD format
+                eventData.start = { date: start };
                 // Google Calendar expects exclusive end dates for all-day events
                 // So increment the end date by 1 day
-                const endDateObj = new Date(endDate + 'T00:00:00');
+                const endDateObj = new Date(end + 'T00:00:00');
                 endDateObj.setDate(endDateObj.getDate() + 1);
                 eventData.end = { date: endDateObj.toISOString().split('T')[0] };
             } else {
