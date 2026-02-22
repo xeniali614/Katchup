@@ -882,6 +882,14 @@ h1, h2, h3, h4, h5, h6 {
     word-break: break-word;
 }
 
+.upload-date {
+    font-size: calc(1em - 1pt);
+}
+
+.upload-date::before {
+    content: ' ';
+}
+
 .empty-state {
     text-align: center;
     color: var(--text-dark);
