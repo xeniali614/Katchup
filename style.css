@@ -32,7 +32,7 @@ html {
 
 body {
     font-family: 'Fragile Bombers', 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
-    font-size: 30px;
+    font-size: 1.3rem;
     color: var(--text-dark);
     line-height: 1.6;
     background-color: var(--bg-light);
@@ -233,7 +233,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Features Section */
 .features {
     padding: 4rem 0;
-    background-color: var(--accent-blue);
+    background-color: var(--bg-light);
     border-top: 8px solid var(--border-color);
     border-bottom: 8px solid var(--border-color);
 }
@@ -245,7 +245,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 3rem;
     color: var(--text-dark);
     letter-spacing: 2px;
-    text-shadow: 3px 3px 0px var(--bg-light);
+    text-shadow: 3px 3px 0px var(--accent-red);
 }
 
 .features-grid {
@@ -255,7 +255,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .feature-card {
-    background-color: var(--bg-light);
+    background-color: var(--accent-red);
     padding: 2rem;
     border: 5px solid var(--border-color);
     box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
@@ -268,10 +268,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .feature-card h4 {
-    font-size: 1.5rem;
+    font-size: 1.9rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
-    color: var(--primary-color);
+    color: var(--bg-light);
     letter-spacing: 1px;
 }
 
@@ -284,7 +284,7 @@ h1, h2, h3, h4, h5, h6 {
 /* CTA Section */
 .cta {
     padding: 4rem 0;
-    background-color: var(--bg-light);
+    background-color: var(--accent-blue);
     text-align: center;
     color: var(--text-dark);
     border: 8px solid var(--border-color);
