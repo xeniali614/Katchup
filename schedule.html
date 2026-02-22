@@ -220,9 +220,23 @@
             width: 32px;
             height: 32px;
         }
+
+        body.schedule-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.schedule-page .main-content {
+            flex: 1;
+        }
+
+        body.schedule-page .footer {
+            margin-top: auto !important;
+        }
     </style>
 </head>
-<body>
+<body class="schedule-page">
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
@@ -850,7 +864,7 @@
     </script>
 
     <!-- Footer -->
-    <footer class="footer" style="margin-top: 48px;">
+    <footer class="footer">
         <div class="container">
             <p>&copy; 2026 Katchup. All rights reserved.</p>
         </div>
