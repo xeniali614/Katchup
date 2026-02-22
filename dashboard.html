@@ -242,7 +242,7 @@
                 // DEBUG: Check all notifications in groups (no recipient filter)
                 const { data: allNotifs } = await supabaseClient
                     .from('notifications')
-                    .select('*')
+                    .select('id, user_id, recipient_id, group_id, type, letter_title, created_at')
                     .in('group_id', groupIds)
                     .limit(10);
                 console.log('ALL notifications in groups (no filter):', allNotifs);
@@ -269,10 +269,32 @@
                     notificationsList.innerHTML = '<p class="empty-state">No new notifications</p>';
                     return;
                 }
+                
+                const userIds = [...new Set(notifications.map(n => n['user_id']))];
+                console.log('User IDs from notifications:', userIds);
+                console.log('first:', userIds[0]);
+                console.log('Type:', typeof userIds[0]);
+                const { data: profiles } = await supabaseClient
+                    .from('profiles')
+                    .select('id, username')
+                    .in('id', userIds);
+
+                console.log('Profiles for notification users:', profiles);
+                
+
+                const usernameMap = {};
+                if (profiles) {
+                    for (let profile of profiles) {
+                        usernameMap[profile.id] = profile.username;
+                    }
+                }
+
+                console.log('username map:',  usernameMap);
+                console.log('first notif:', notifications[0]);
 
                 let html = '';
                 for (let notif of notifications) {
-                    const userName = 'A friend';
+                    const userName = usernameMap[notif.user_id] || 'A friend';
                     let message = '';
 
                     if (notif.type === 'photos_uploaded') {
