@@ -259,7 +259,7 @@
                 }
 
                 currentUserId = user.id;
-                console.log('Current user:', user.id);
+                //console.log('Current user:', user.id);
 
                 // Get user's groups
                 const { data: memberData } = await supabaseClient
@@ -267,7 +267,7 @@
                     .select('group_id')
                     .eq('user_id', user.id);
 
-                console.log('User groups:', memberData);
+                //console.log('User groups:', memberData);
 
                 if (!memberData || memberData.length === 0) {
                     notificationsList.innerHTML = '<p class="empty-state">No group notifications</p>';
@@ -276,7 +276,7 @@
                 }
 
                 const groupIds = memberData.map(m => m.group_id);
-                console.log('Group IDs:', groupIds);
+                //console.log('Group IDs:', groupIds);
 
                 // DEBUG: Check all notifications in groups (no recipient filter)
                 const { data: allNotifs } = await supabaseClient
@@ -284,7 +284,7 @@
                     .select('id, user_id, recipient_id, group_id, type, letter_title, created_at')
                     .in('group_id', groupIds)
                     .limit(10);
-                console.log('ALL notifications in groups (no filter):', allNotifs);
+                //console.log('ALL notifications in groups (no filter):', allNotifs);
 
                 // Fetch notifications for user's groups, excluding their own
                 const { data: notifications, error } = await supabaseClient
@@ -295,8 +295,8 @@
                     .order('created_at', { ascending: false })
                     .limit(20);
 
-                console.log('Notifications query error:', error);
-                console.log('Notifications data:', notifications);
+                //console.log('Notifications query error:', error);
+                //console.log('Notifications data:', notifications);
 
                 if (error) {
                     console.error('Error loading notifications:', error);
@@ -314,15 +314,15 @@
                 clearNotificationsBtn.disabled = false;
                 
                 const userIds = [...new Set(notifications.map(n => n['user_id']))];
-                console.log('User IDs from notifications:', userIds);
-                console.log('first:', userIds[0]);
-                console.log('Type:', typeof userIds[0]);
+                //console.log('User IDs from notifications:', userIds);
+                //console.log('first:', userIds[0]);
+                //console.log('Type:', typeof userIds[0]);
                 const { data: profiles } = await supabaseClient
                     .from('profiles')
                     .select('id, username')
                     .in('id', userIds);
 
-                console.log('Profiles for notification users:', profiles);
+                //console.log('Profiles for notification users:', profiles);
                 
 
                 const usernameMap = {};
@@ -332,8 +332,8 @@
                     }
                 }
 
-                console.log('username map:',  usernameMap);
-                console.log('first notif:', notifications[0]);
+                //console.log('username map:',  usernameMap);
+                //console.log('first notif:', notifications[0]);
 
                 let html = '';
                 for (let notif of notifications) {

@@ -81,8 +81,10 @@
         <div class="meet-grid">
             <section class="meet-card">
                 <h3>Step 2: Polls</h3>
-                <div id="pollGate" class="alert warning">
-                    <p>Add at least one availability slot to unlock polls.</p>
+                <div id="pollGate" class="alert warning poll-gate-alert">
+                    <button type="button" class="poll-gate-dismiss" aria-label="Dismiss availability warning" disabled>...</button>
+                    <p class="poll-gate-title">availability.exe</p>
+                    <p>[!] Add at least one availability slot to unlock polls.</p>
                 </div>
                 <div class="meet-list">
                     <h4>Open Polls</h4>
@@ -165,6 +167,7 @@
         const pollMessage = document.getElementById('pollMessage');
         const pollsList = document.getElementById('pollsList');
         const pollGate = document.getElementById('pollGate');
+        const pollGateDismiss = pollGate ? pollGate.querySelector('.poll-gate-dismiss') : null;
         const suggestBtn = document.getElementById('suggestBtn');
         const suggestionsList = document.getElementById('suggestionsList');
         const pollOwnerActions = document.getElementById('pollOwnerActions');
@@ -444,6 +447,12 @@
                 pollSelect.innerHTML = '<option value="" disabled selected>Select a poll...</option>';
                 suggestionsList.innerHTML = '<p class="empty-state">Add availability to unlock suggestions.</p>';
             }
+        }
+
+        if (pollGateDismiss) {
+            pollGateDismiss.addEventListener('click', () => {
+                pollGate.style.display = 'none';
+            });
         }
 
         async function loadPolls(groupId) {
