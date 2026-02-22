@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'ByteBounce';
-    src: url('../fonts/bytebounce/ByteBounce.ttf') format('truetype');
+    src: url('fonts/bytebounce/ByteBounce.ttf') format('truetype');
 }
 
 @font-face {
