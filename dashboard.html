@@ -174,7 +174,7 @@
                     </div>
                     <div class="username-section">
                         <!-- ADD USERNAME, BE ABLE TO CHANGE USERNAME-->
-                        <div class="username">username</div>
+                        <div class="username"></div>
                         <button class="change-username-btn">Change Username</button>
                         <input type="text" id="usernameInput" class="file-input-hidden" placeholder="Enter new username">
                     </div>
@@ -206,16 +206,19 @@
                     return;
                 }
 
-                // Load profile picture from Supabase
-                const { data: profile, error: profileError } = await supabaseClient
-                    .from('profiles')
-                    .select('avatar_url, updated_at')
-                    .eq('id', user.id)
-                    .maybeSingle();
+                const savedProfilePicture = localStorage.getItem('profilePicture');
+                if (savedProfilePicture) {
+                    profileImage.src = savedProfilePicture;
+                }
 
-                if (!profileError && profile?.avatar_url) {
-                    const cacheKey = profile.updated_at ? new Date(profile.updated_at).getTime() : Date.now();
-                    profileImage.src = `${profile.avatar_url}?t=${cacheKey}`;
+                const { data: userData } = await supabaseClient
+                    .from('profiles')
+                    .select('username')
+                    .eq('id', user.id)
+                    .single();
+
+                if (userData) {
+                    document.querySelector('.username').textContent = userData.username;
                 }
 
                 console.log('Current user:', user.id);
@@ -305,59 +308,6 @@
         const fileInput = document.getElementById('fileInput');
         const profileImage = document.getElementById('profileImage');
 
-        async function convertImageToJpeg(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.naturalWidth;
-                        canvas.height = img.naturalHeight;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-
-                        canvas.toBlob((blob) => {
-                            if (!blob) {
-                                reject(new Error('Could not convert image to JPEG.'));
-                                return;
-                            }
-                            resolve(blob);
-                        }, 'image/jpeg', 0.9);
-                    };
-                    img.onerror = () => reject(new Error('Could not read selected image.'));
-                    img.src = reader.result;
-                };
-                reader.onerror = () => reject(new Error('Could not load selected file.'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function uploadAvatar(file, userId) {
-            const jpegBlob = await convertImageToJpeg(file);
-            const filePath = `avatars/${userId}/avatar.jpg`;
-
-            const { error } = await supabaseClient
-                .storage
-                .from('profile')
-                .upload(filePath, jpegBlob, {
-                    cacheControl: '3600',
-                    contentType: 'image/jpeg',
-                    upsert: true
-                });
-
-            if (error) {
-                throw new Error(error.message);
-            }
-
-            const { data: urlData } = supabaseClient
-                .storage
-                .from('profile')
-                .getPublicUrl(filePath);
-
-            return { avatarUrl: urlData.publicUrl, path: filePath };
-        }
-
         // Load saved profile picture from localStorage
         window.addEventListener('DOMContentLoaded', function() {
             loadNotifications();
@@ -365,69 +315,53 @@
 
         // Handle change picture button click
         changePictureBtn.addEventListener('click', function() {
-            fileInput.value = '';
             fileInput.click();
         });
 
         // Handle file input change
-        fileInput.addEventListener('change', async function(event) {
+        fileInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                // Validate file size (max 5MB)
-                const maxSize = 5 * 1024 * 1024;
-                if (file.size > maxSize) {
-                    alert('File size must be less than 5MB');
-                    return;
-                }
-
-                try {
-                    // Get current user
-                    const { data: { user } } = await supabaseClient.auth.getUser();
-                    if (!user) {
-                        alert('Please log in first');
-                        return;
-                    }
-
-                    // Show loading state
-                    changePictureBtn.textContent = 'Uploading...';
-                    changePictureBtn.disabled = true;
-
-                    // Always overwrite one file per user: profile/avatars/{uid}/avatar.jpg
-                    const { avatarUrl, path } = await uploadAvatar(file, user.id);
-                    console.log('Avatar uploaded to:', `profile/${path}`);
-
-                    // Upsert profile row so first-time uploads also work
-                    const { error: updateError } = await supabaseClient
-                        .from('profiles')
-                        .upsert({
-                            id: user.id,
-                            avatar_url: avatarUrl,
-                            updated_at: new Date().toISOString()
-                        }, { onConflict: 'id' });
-
-                    if (updateError) {
-                        console.error('Profile update error:', updateError);
-                        alert('Failed to save profile photo: ' + updateError.message);
-                        return;
-                    }
-
-                    // Update UI
-                    profileImage.src = `${avatarUrl}?t=${Date.now()}`;
-                    alert('Profile picture updated successfully!');
-
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while updating profile picture: ' + error.message);
-                } finally {
-                    // Reset button state
-                    changePictureBtn.textContent = 'Change Picture';
-                    changePictureBtn.disabled = false;
-                    fileInput.value = '';
-                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageData = e.target.result;
+                    profileImage.src = imageData;
+                    // Save to localStorage
+                    localStorage.setItem('profilePicture', imageData);
+                };
+                reader.readAsDataURL(file);
             } else {
                 alert('Please select a valid image file.');
             }
         });
+
+        document.querySelector('.change-username-btn').addEventListener('click', async function() {
+            const usernameInput = document.getElementById('usernameInput');
+            if(usernameInput.style.display == 'block') {
+                const newUsername = usernameInput.value.trim();
+                if (!newUsername) {
+                    return;
+                }
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({ username: newUsername })
+                    .eq('id', user.id);
+                
+                if (!error) {
+                    document.querySelector('.username').textContent = newUsername;
+                    usernameInput.style.display = 'none';
+                    usernameInput.value = '';
+                    this.textContent = 'Change Username';
+                } else {
+                    alert('Error updating username');
+                }
+            }else{
+                usernameInput.style.display = 'block';
+                this.textContent = 'Save Username';
+            }
+        });    
+           
 
         // Refresh notifications every 30 seconds
         setInterval(loadNotifications, 30000);
