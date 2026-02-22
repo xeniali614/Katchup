@@ -296,11 +296,17 @@
                 for (let notif of notifications) {
                     const userName = usernameMap[notif.user_id] || 'A friend';
                     let message = '';
+                    let href = '';
 
                     if (notif.type === 'photos_uploaded') {
                         message = `${userName} finished their weekly photo upload!`;
                     } else if (notif.type === 'letter_written') {
                         message = `${userName} wrote a new letter: "${notif.letter_title || 'Letter'}"`;
+                    } else if (notif.type === 'poll_created') {
+                        message = `${userName} created a poll: "${notif.letter_title || 'Poll'}"`;
+                        if (notif.poll_id) {
+                            href = `updateSchedule.html?pollId=${notif.poll_id}`;
+                        }
                     }
 
                     const timestamp = new Date(notif.created_at).toLocaleDateString('en-US', {
@@ -310,12 +316,21 @@
                         minute: '2-digit'
                     });
 
-                    html += `
-                        <div class="notification-item">
-                            <p class="notification-message">${message}</p>
-                            <p class="notification-time">${timestamp}</p>
-                        </div>
-                    `;
+                    if (href) {
+                        html += `
+                            <a class="notification-item" href="${href}">
+                                <p class="notification-message">${message}</p>
+                                <p class="notification-time">${timestamp}</p>
+                            </a>
+                        `;
+                    } else {
+                        html += `
+                            <div class="notification-item">
+                                <p class="notification-message">${message}</p>
+                                <p class="notification-time">${timestamp}</p>
+                            </div>
+                        `;
+                    }
                 }
 
                 notificationsList.innerHTML = html;

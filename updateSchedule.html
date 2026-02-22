@@ -142,6 +142,8 @@
         const pollGate = document.getElementById('pollGate');
         const suggestBtn = document.getElementById('suggestBtn');
         const suggestionsList = document.getElementById('suggestionsList');
+        const pollIdFromUrl = new URLSearchParams(window.location.search).get('pollId');
+        const hasPollDeepLink = Boolean(pollIdFromUrl);
 
         let currentUser = null;
         let pollsCache = {};
@@ -328,16 +330,17 @@
 
         function setPollsLocked(locked) {
             pollsLocked = locked;
-            pollGate.style.display = locked ? 'block' : 'none';
+            const shouldLockView = locked && !hasPollDeepLink;
+            pollGate.style.display = shouldLockView ? 'block' : 'none';
 
             pollForm.querySelectorAll('input, button').forEach(el => {
                 el.disabled = locked;
             });
 
-            pollSelect.disabled = locked;
-            suggestBtn.disabled = locked;
+            pollSelect.disabled = shouldLockView;
+            suggestBtn.disabled = shouldLockView;
 
-            if (locked) {
+            if (shouldLockView) {
                 pollsList.innerHTML = '<p class="empty-state">Add availability to view polls.</p>';
                 pollSelect.innerHTML = '<option value="" disabled selected>Select a poll...</option>';
                 suggestionsList.innerHTML = '<p class="empty-state">Add availability to unlock suggestions.</p>';
@@ -345,7 +348,7 @@
         }
 
         async function loadPolls(groupId) {
-            if (!groupId || pollsLocked) {
+            if (!groupId || (pollsLocked && !hasPollDeepLink)) {
                 return;
             }
 
@@ -388,6 +391,221 @@
             });
 
             pollSelect.innerHTML = options;
+        }
+
+        async function createPollNotifications(poll) {
+            const { data: groupMembers } = await supabaseClient
+                .from('group_members')
+                .select('user_id')
+                .eq('group_id', poll.group_id);
+
+            if (!groupMembers || groupMembers.length === 0) {
+                return;
+            }
+
+            const notificationPromises = groupMembers
+                .filter(m => m.user_id !== currentUser.id)
+                .map(m => {
+                    return supabaseClient
+                        .from('notifications')
+                        .insert([
+                            {
+                                user_id: currentUser.id,
+                                group_id: poll.group_id,
+                                recipient_id: m.user_id,
+                                type: 'poll_created',
+                                letter_title: poll.title,
+                                poll_id: poll.id,
+                                created_at: new Date().toISOString()
+                            }
+                        ]);
+                });
+
+            await Promise.all(notificationPromises);
+        }
+
+        function toIsoStringSafe(value) {
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? value : date.toISOString();
+        }
+
+        function buildVoteKey(startValue, endValue) {
+            const startIso = toIsoStringSafe(startValue);
+            const endIso = toIsoStringSafe(endValue);
+            return `${startIso}|${endIso}`;
+        }
+
+        async function getPollVotes(pollId) {
+            const { data, error } = await supabaseClient
+                .from('meet_poll_votes')
+                .select('user_id, start_time, end_time')
+                .eq('poll_id', pollId);
+
+            if (error || !data) {
+                return { voteMap: new Map(), userVoteKeys: new Set() };
+            }
+
+            const voteMap = new Map();
+            const userVoteKeys = new Set();
+
+            data.forEach(row => {
+                const key = buildVoteKey(row.start_time, row.end_time);
+                if (!voteMap.has(key)) {
+                    voteMap.set(key, new Set());
+                }
+                voteMap.get(key).add(row.user_id);
+                if (row.user_id === currentUser?.id) {
+                    userVoteKeys.add(key);
+                }
+            });
+
+            return { voteMap, userVoteKeys };
+        }
+
+        async function getPollFinal(pollId) {
+            const { data, error } = await supabaseClient
+                .from('meet_poll_finals')
+                .select('start_time, end_time')
+                .eq('poll_id', pollId)
+                .maybeSingle();
+
+            if (error || !data) {
+                return null;
+            }
+
+            return data;
+        }
+
+        async function optIntoSlot(pollId, startIso, endIso) {
+            if (!currentUser) {
+                showMessage(pollMessage, 'Please log in to vote.', 'error');
+                return;
+            }
+
+            const { data: existingVote } = await supabaseClient
+                .from('meet_poll_votes')
+                .select('id')
+                .eq('poll_id', pollId)
+                .eq('user_id', currentUser.id)
+                .eq('start_time', startIso)
+                .eq('end_time', endIso)
+                .maybeSingle();
+
+            if (existingVote) {
+                const { error: deleteError } = await supabaseClient
+                    .from('meet_poll_votes')
+                    .delete()
+                    .eq('id', existingVote.id);
+
+                if (deleteError) {
+                    showMessage(pollMessage, `Failed to remove your vote: ${deleteError.message}`, 'error');
+                    return;
+                }
+
+                showMessage(pollMessage, 'You opted out of that time.', 'success');
+                await suggestTimes();
+                return;
+            }
+
+            const { error } = await supabaseClient
+                .from('meet_poll_votes')
+                .insert([
+                    {
+                        poll_id: pollId,
+                        user_id: currentUser.id,
+                        start_time: startIso,
+                        end_time: endIso,
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+
+            if (error) {
+                showMessage(pollMessage, `Failed to save your vote: ${error.message}`, 'error');
+                return;
+            }
+
+            showMessage(pollMessage, 'You opted in for that time.', 'success');
+            await suggestTimes();
+        }
+
+        async function finalizePoll(pollId, startIso, endIso) {
+            if (!currentUser) {
+                showMessage(pollMessage, 'Please log in to finalize.', 'error');
+                return;
+            }
+
+            const poll = pollsCache[pollId];
+            if (!poll || poll.created_by !== currentUser.id) {
+                showMessage(pollMessage, 'Only the poll creator can finalize.', 'error');
+                return;
+            }
+
+            const existingFinal = await getPollFinal(pollId);
+            if (existingFinal) {
+                showMessage(pollMessage, 'This poll has already been finalized.', 'error');
+                return;
+            }
+
+            const { error: finalizeError } = await supabaseClient
+                .from('meet_poll_finals')
+                .insert([
+                    {
+                        poll_id: pollId,
+                        start_time: startIso,
+                        end_time: endIso,
+                        finalized_by: currentUser.id,
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+
+            if (finalizeError) {
+                showMessage(pollMessage, `Failed to finalize: ${finalizeError.message}`, 'error');
+                return;
+            }
+
+            const { data: votes } = await supabaseClient
+                .from('meet_poll_votes')
+                .select('user_id')
+                .eq('poll_id', pollId)
+                .eq('start_time', startIso)
+                .eq('end_time', endIso);
+
+            const userIds = (votes || []).map(row => row.user_id);
+            await createCalendarEventsForUsers(userIds, poll, startIso, endIso);
+
+            showMessage(pollMessage, 'Poll finalized and calendars updated!', 'success');
+            await suggestTimes();
+        }
+
+        async function createCalendarEventsForUsers(userIds, poll, startIso, endIso) {
+            if (!userIds || userIds.length === 0) {
+                return;
+            }
+
+            const timeZone = 'UTC';
+            const payload = {
+                summary: poll.title,
+                description: `Poll finalized: ${poll.title}`,
+                start: { dateTime: startIso, timeZone },
+                end: { dateTime: endIso, timeZone }
+            };
+
+            await Promise.all(userIds.map(async userId => {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/calendar/events`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...payload, userId }),
+                        credentials: 'include'
+                    });
+
+                    if (!response.ok) {
+                        console.warn('Calendar event failed for user', userId);
+                    }
+                } catch (error) {
+                    console.warn('Calendar event error for user', userId, error);
+                }
+            }));
         }
 
         async function getGroupMemberCount(groupId) {
@@ -506,12 +724,32 @@
                 return;
             }
 
+            const { voteMap, userVoteKeys } = await getPollVotes(pollId);
+            const finalRow = await getPollFinal(pollId);
+            const finalKey = finalRow ? buildVoteKey(finalRow.start_time, finalRow.end_time) : null;
+            const isCreator = poll.created_by === currentUser?.id;
+
             suggestionsList.innerHTML = suggestions.map(slot => {
+                const startIso = slot.start.toISOString();
+                const endIso = slot.end.toISOString();
+                const key = buildVoteKey(startIso, endIso);
+                const votesForSlot = voteMap.get(key)?.size || 0;
+                const isUserChoice = userVoteKeys.has(key);
+                const isFinal = finalKey === key;
+                const voteLabel = isUserChoice ? 'Opted In' : 'Opt In';
+                const voteDisabled = isFinal ? 'disabled' : '';
+                const finalizeDisabled = isFinal || finalKey ? 'disabled' : '';
+
                 return `
                     <div class="meet-slot">
                         <div>${slot.start.toLocaleString()}</div>
                         <div>${slot.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <span class="meet-badge">${slot.count}/${memberCount || '?'} available</span>
+                        <span class="meet-badge">${votesForSlot}/${memberCount || '?'} opted in</span>
+                        ${isFinal ? '<span class="meet-badge">Final</span>' : ''}
+                        <div class="meet-actions">
+                            <button type="button" class="btn-secondary" data-action="vote" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${voteDisabled}>${voteLabel}</button>
+                            ${isCreator ? `<button type="button" class="btn-primary" data-action="finalize" data-poll-id="${pollId}" data-start="${startIso}" data-end="${endIso}" ${finalizeDisabled}>Finalize</button>` : ''}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -600,7 +838,7 @@
                 return;
             }
 
-            const { error } = await supabaseClient
+            const { data: newPoll, error } = await supabaseClient
                 .from('meet_polls')
                 .insert([
                     {
@@ -611,7 +849,9 @@
                         end_date: normalizedDates.endDate,
                         duration_minutes: duration
                     }
-                ]);
+                ])
+                .select()
+                .single();
 
             if (error) {
                 showMessage(pollMessage, 'Failed to create poll. Check the database table.', 'error');
@@ -621,6 +861,29 @@
             showMessage(pollMessage, 'Poll created!', 'success');
             pollForm.reset();
             await loadPolls(availabilityGroup.value);
+            if (newPoll) {
+                await createPollNotifications(newPoll);
+            }
+        });
+
+        suggestionsList.addEventListener('click', async (event) => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) {
+                return;
+            }
+
+            const action = button.dataset.action;
+            const pollId = button.dataset.pollId;
+            const startIso = button.dataset.start;
+            const endIso = button.dataset.end;
+
+            if (action === 'vote') {
+                await optIntoSlot(pollId, startIso, endIso);
+            }
+
+            if (action === 'finalize') {
+                await finalizePoll(pollId, startIso, endIso);
+            }
         });
 
         availabilityGroup.addEventListener('change', async () => {
@@ -647,6 +910,24 @@
             await getCurrentUser();
             await loadGroups();
             setPollsLocked(true);
+            if (pollIdFromUrl) {
+                const { data: poll, error } = await supabaseClient
+                    .from('meet_polls')
+                    .select('*')
+                    .eq('id', pollIdFromUrl)
+                    .single();
+
+                if (!error && poll) {
+                    availabilityGroup.value = poll.group_id;
+                    await checkAvailabilityGate();
+                    await loadAvailabilityForWeek();
+                    await loadPolls(poll.group_id);
+                    pollSelect.value = poll.id;
+                    pollsCache[poll.id] = poll;
+                    await suggestTimes();
+                    pollsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
         });
     </script>
 </body>
