@@ -8,18 +8,18 @@
     <script src="vendor/supabase.min.js"></script>
     <script src="config.js"></script>
 </head>
-<body>
+<body class="join-page">
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
             <div class="navbar-brand">
-                <a href="dashboard.html" class="logo-link"><img src="images/new splat.png" alt="Katchup Logo" class="logo"></a>
-                <h1><a href="index.html" class="title-link">Katchup</a></h1>
+                <img src="images/new splat.png" alt="Katchup Logo" class="logo">
+                <h1>Katchup</h1>
             </div>
             <div class="navbar-menu">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="index.html#about" class="nav-link">About</a>
-                <a href="login.html" class="nav-link btn-secondary">Sign In</a>
+                <a href="index.html" class="nav-link index-nav-btn">Home</a>
+                <a href="index.html#about" class="nav-link index-nav-btn">About</a>
+                <a href="login.html" class="nav-link btn-secondary index-nav-btn">Login</a>
             </div>
         </div>
     </nav>
@@ -33,11 +33,11 @@
 
                 <form id="signupForm" class="auth-form">
                     <div class="form-group">
-                        <label for="fullName">Full Name</label>
+                        <label for="username">Username</label>
                         <input 
                             type="text" 
-                            id="fullName" 
-                            name="fullName" 
+                            id="username" 
+                            name="username" 
                             placeholder="John Doe"
                             required
                         >
@@ -98,17 +98,6 @@
         const signupForm = document.getElementById('signupForm');
         const messageEl = document.getElementById('message');
 
-        async function ensureProfileForUser(userId, fullName) {
-            const username = (fullName || '').trim();
-            if (!username) {
-                return { error: new Error('Name is required') };
-            }
-
-            return await supabaseClient
-                .from('profiles')
-                .upsert({ id: userId, username: username }, { onConflict: 'id' });
-        }
-
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -145,61 +134,15 @@
                 });
 
                 if (authError) {
-                    const alreadyRegistered = /already registered|already exists|already been registered/i.test(authError.message || '');
-
-                    if (!alreadyRegistered) {
-                        showMessage(authError.message, 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Create Account';
-                        return;
-                    }
-
-                    const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
-                        email,
-                        password,
-                    });
-
-                    if (loginError || !loginData?.user) {
-                        showMessage('This email already exists. Use the original password or reset password.', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Create Account';
-                        return;
-                    }
-
-                    const { error: recoveryProfileError } = await ensureProfileForUser(loginData.user.id, fullName);
-                    if (recoveryProfileError) {
-                        showMessage('Account exists, but profile recovery failed. Please try again.', 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Create Account';
-                        return;
-                    }
-
-                    showMessage('Account reconnected successfully! Redirecting...', 'success');
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
-
+                    showMessage(authError.message, 'error');
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Create Account';
                     return;
                 }
 
-                const signedUpUser = authData?.user;
-                if (!signedUpUser) {
-                    showMessage('Account created. Please check your email to confirm, then sign in.', 'success');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Create Account';
-                    return;
-                }
-
-                const { error: profileError } = await ensureProfileForUser(signedUpUser.id, fullName);
-                if (profileError) {
-                    showMessage('Account created, but profile setup failed. Please try signing in again.', 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Create Account';
-                    return;
-                }
-
-                showMessage('Account created successfully! Redirecting...', 'success');
-                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+                // Store user profile in profiles table
+            showMessage('Account created successfully! Redirecting...', 'success');
+            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
@@ -228,7 +171,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>dorm floor productions™</p>
+            <p>&copy; 2026 Katchup. All rights reserved.</p>
         </div>
     </footer>
 </body>

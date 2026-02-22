@@ -145,6 +145,11 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--text-dark);
 }
 
+.join-page .navbar .index-nav-btn,
+.login-page .navbar .index-nav-btn {
+    width: 120px;
+}
+
 /* Buttons */
 .btn-primary, .btn-secondary {
     padding: 1rem 2rem;
