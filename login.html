@@ -129,6 +129,37 @@
                     return;
                 }
 
+                const signedInUser = authData?.user;
+                if (!signedInUser) {
+                    showMessage('Unable to verify account. Please try again.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                    return;
+                }
+
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('id, username')
+                    .eq('id', signedInUser.id)
+                    .maybeSingle();
+
+                if (profileError) {
+                    await supabaseClient.auth.signOut();
+                    showMessage('Could not validate your profile. Please contact support.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                    return;
+                }
+
+                const hasValidProfile = profile && profile.id && profile.username && profile.username.trim().length > 0;
+                if (!hasValidProfile) {
+                    await supabaseClient.auth.signOut();
+                    showMessage('This account no longer has website access. Please sign up again.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                    return;
+                }
+
                 showMessage('Sign in successful! Redirecting...', 'success');
                 // Redirect to dashboard after 2 seconds
                 setTimeout(() => {

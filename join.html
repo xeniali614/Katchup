@@ -98,6 +98,17 @@
         const signupForm = document.getElementById('signupForm');
         const messageEl = document.getElementById('message');
 
+        async function ensureProfileForUser(userId, fullName) {
+            const username = (fullName || '').trim();
+            if (!username) {
+                return { error: new Error('Name is required') };
+            }
+
+            return await supabaseClient
+                .from('profiles')
+                .upsert({ id: userId, username: username }, { onConflict: 'id' });
+        }
+
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -134,15 +145,61 @@
                 });
 
                 if (authError) {
-                    showMessage(authError.message, 'error');
+                    const alreadyRegistered = /already registered|already exists|already been registered/i.test(authError.message || '');
+
+                    if (!alreadyRegistered) {
+                        showMessage(authError.message, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Create Account';
+                        return;
+                    }
+
+                    const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
+                        email,
+                        password,
+                    });
+
+                    if (loginError || !loginData?.user) {
+                        showMessage('This email already exists. Use the original password or reset password.', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Create Account';
+                        return;
+                    }
+
+                    const { error: recoveryProfileError } = await ensureProfileForUser(loginData.user.id, fullName);
+                    if (recoveryProfileError) {
+                        showMessage('Account exists, but profile recovery failed. Please try again.', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Create Account';
+                        return;
+                    }
+
+                    showMessage('Account reconnected successfully! Redirecting...', 'success');
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Create Account';
                     return;
                 }
 
-                // Store user profile in profiles table
-            showMessage('Account created successfully! Redirecting...', 'success');
-            setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
+                const signedUpUser = authData?.user;
+                if (!signedUpUser) {
+                    showMessage('Account created. Please check your email to confirm, then sign in.', 'success');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                    return;
+                }
+
+                const { error: profileError } = await ensureProfileForUser(signedUpUser.id, fullName);
+                if (profileError) {
+                    showMessage('Account created, but profile setup failed. Please try signing in again.', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                    return;
+                }
+
+                showMessage('Account created successfully! Redirecting...', 'success');
+                setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
