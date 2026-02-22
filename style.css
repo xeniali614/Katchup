@@ -3,6 +3,11 @@
     src: url('../fonts/bytebounce/ByteBounce.ttf') format('truetype');
 }
 
+@font-face {
+    font-family: 'Fragile Bombers';
+    src: url('fonts/fragile-bombers/Fragile%20Bombers.otf') format('opentype');
+}
+
 :root {
     --primary-color: #CA3F3F;       /* Ketchup red */
     --accent-red: #E67575;          /* Light pink-red */
@@ -25,11 +30,15 @@ html {
 }
 
 body {
-    font-family: 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
-    font-size: px;
+    font-family: 'Fragile Bombers', 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
+    font-size: 30px;
     color: var(--text-dark);
     line-height: 1.6;
     background-color: var(--bg-light);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
 }
 
 .container {
@@ -74,6 +83,7 @@ body {
     text-decoration: none;
     color: var(--bg-light);
     font-weight: 700;
+    font-size: 0.95rem;
     transition: all 0.1s ease;
     padding: 0.75rem 1.25rem;
     border: 3px solid var(--bg-light);
@@ -95,7 +105,7 @@ body {
     border: 4px solid var(--border-color);
     text-decoration: none;
     font-weight: 900;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: all 0.1s ease;
     display: inline-block;
     cursor: pointer;
@@ -134,7 +144,7 @@ body {
     padding: 0.75rem 1.25rem;
     border: 3px solid var(--border-color);
     font-weight: 900;
-    font-size: 1rem;
+    font-size: 0.95rem;
     box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
     text-decoration: none;
     display: inline-flex;
@@ -204,7 +214,7 @@ body {
 .hero-buttons .btn-primary,
 .hero-buttons .btn-secondary {
     padding: 1rem 2rem;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
 }
 
 /* Features Section */
@@ -411,6 +421,12 @@ body {
     color: var(--text-dark);
     white-space: nowrap;
     font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.hamburger-menu #logout-btn {
+    color: var(--text-dark);
+    font-size: 0.9rem;
 }
 
 .hamburger-menu a:hover {
@@ -533,7 +549,7 @@ body {
     padding: 1rem 1rem;
     border: 4px solid var(--border-color);
     border-radius: 0;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-family: inherit;
     background-color: var(--bg-light);
     cursor: pointer;
@@ -549,7 +565,7 @@ body {
 .btn-submit {
     width: 100%;
     padding: 1rem;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 900;
     border: 4px solid var(--border-color);
     border-radius: 0;
@@ -1081,7 +1097,7 @@ body {
     border-radius: 0;
     cursor: pointer;
     font-weight: 900;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     transition: all 0.1s ease;
     letter-spacing: 1px;
 }
@@ -1139,7 +1155,7 @@ body {
     border-radius: 0;
     cursor: pointer;
     font-weight: 900;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     transition: all 0.1s ease;
     letter-spacing: 1px;
 }
@@ -1192,7 +1208,7 @@ body {
     padding: 0.75rem 1.5rem;
     border: 4px solid var(--border-color);
     border-radius: 0;
-    font-size: 1rem;
+    font-size: 0.9rem;
     cursor: pointer;
     background-color: var(--bg-light);
     color: var(--text-dark);
