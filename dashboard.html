@@ -52,23 +52,55 @@
             object-fit: cover;
         }
 
-        .change-picture-btn {
-            padding: 10px 20px;
-            background-color: #304A36;
-            color: white;
-            border: none;
-            border-radius: 5px;
+        .profile-action-btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: var(--bg-light);
+            border: 4px solid var(--border-color);
+            border-radius: 0;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            font-size: 0.85rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+            box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
+            font-family: inherit;
         }
 
-        .change-picture-btn:hover {
-            background-color: #2a3d2e;
+        .profile-action-btn:hover {
+            background-color: var(--accent-red);
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 0px rgba(48, 54, 74, 0.2);
         }
 
-        .change-picture-btn:active {
-            transform: scale(0.98);
+        .profile-action-btn:active {
+            transform: translateY(0);
+            box-shadow: 2px 2px 0px rgba(48, 54, 74, 0.15);
+        }
+
+        .profile-input {
+            padding: 0.75rem 1rem;
+            border: 4px solid var(--border-color);
+            background-color: var(--bg-light);
+            font-size: 0.9rem;
+            font-family: inherit;
+            font-weight: 700;
+            letter-spacing: 1px;
+            width: 220px;
+        }
+
+        .profile-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #F8F2E5;
+            box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.15);
+        }
+
+        .username {
+            font-weight: 900;
+            letter-spacing: 1px;
+            cursor: pointer;
+            padding: 0.25rem 0;
         }
 
         .group-info {
@@ -169,14 +201,13 @@
                         <div class="profile-picture-container">
                             <img id="profileImage" class="profile-picture" src="images/unknown user.webp" alt="Profile Picture">
                         </div>
-                        <button class="change-picture-btn" id="changePictureBtn">Change Picture</button>
+                        <div class="username"></div>
+                        <input type="text" id="usernameInput" class="file-input-hidden profile-input" placeholder="Enter new username">
+                        <button class="profile-action-btn" id="changePictureBtn">Change Picture</button>
                         <input type="file" id="fileInput" class="file-input-hidden" accept="image/*">
                     </div>
                     <div class="username-section">
                         <!-- ADD USERNAME, BE ABLE TO CHANGE USERNAME-->
-                        <div class="username"></div>
-                        <button class="change-username-btn">Change Username</button>
-                        <input type="text" id="usernameInput" class="file-input-hidden" placeholder="Enter new username">
                     </div>
                 </div>
 
@@ -372,32 +403,51 @@
             }
         });
 
-        document.querySelector('.change-username-btn').addEventListener('click', async function() {
-            const usernameInput = document.getElementById('usernameInput');
-            if(usernameInput.style.display == 'block') {
-                const newUsername = usernameInput.value.trim();
-                if (!newUsername) {
-                    return;
-                }
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                const { error } = await supabaseClient
-                    .from('profiles')
-                    .update({ username: newUsername })
-                    .eq('id', user.id);
-                
-                if (!error) {
-                    document.querySelector('.username').textContent = newUsername;
-                    usernameInput.style.display = 'none';
-                    usernameInput.value = '';
-                    this.textContent = 'Change Username';
-                } else {
-                    alert('Error updating username');
-                }
-            }else{
-                usernameInput.style.display = 'block';
-                this.textContent = 'Save Username';
+        const usernameDisplay = document.querySelector('.username');
+        const usernameInput = document.getElementById('usernameInput');
+
+        async function saveUsername() {
+            const newUsername = usernameInput.value.trim();
+            if (!newUsername) {
+                usernameInput.style.display = 'none';
+                usernameInput.value = '';
+                return;
             }
-        });    
+
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { error } = await supabaseClient
+                .from('profiles')
+                .update({ username: newUsername })
+                .eq('id', user.id);
+
+            if (!error) {
+                usernameDisplay.textContent = newUsername;
+                usernameInput.style.display = 'none';
+                usernameInput.value = '';
+            } else {
+                alert('Error updating username');
+            }
+        }
+
+        usernameDisplay.addEventListener('click', () => {
+            usernameInput.style.display = 'block';
+            usernameInput.value = usernameDisplay.textContent.trim();
+            usernameInput.focus();
+            usernameInput.select();
+        });
+
+        usernameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveUsername();
+            }
+        });
+
+        usernameInput.addEventListener('blur', () => {
+            if (usernameInput.style.display === 'block') {
+                saveUsername();
+            }
+        });
            
 
         // Refresh notifications every 30 seconds
