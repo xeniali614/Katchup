@@ -207,13 +207,13 @@
                 }
 
                 // Load profile picture from Supabase
-                const { data: profile } = await supabaseClient
+                const { data: profile, error: profileError } = await supabaseClient
                     .from('profiles')
                     .select('avatar_url')
                     .eq('id', user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (profile?.avatar_url) {
+                if (!profileError && profile?.avatar_url) {
                     profileImage.src = profile.avatar_url;
                 }
 
@@ -337,22 +337,23 @@
                     changePictureBtn.textContent = 'Uploading...';
                     changePictureBtn.disabled = true;
 
-                    // Upload to Supabase Storage
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${user.id}.${fileExt}`;
-                    const filePath = `avatars/${fileName}`;
+                    // Upload to Supabase Storage (store under user folder for cleaner RLS matching)
+                    const extFromType = (file.type || '').split('/')[1] || 'jpg';
+                    const fileExt = extFromType.toLowerCase() === 'jpeg' ? 'jpg' : extFromType.toLowerCase();
+                    const filePath = `avatars/${user.id}/avatar.${fileExt}`;
 
                     const { error: uploadError } = await supabaseClient
                         .storage
                         .from('profile')
                         .upload(filePath, file, { 
                             cacheControl: '3600',
+                            contentType: file.type,
                             upsert: true 
                         });
 
                     if (uploadError) {
                         console.error('Upload error:', uploadError);
-                        alert('Failed to upload image');
+                        alert('Failed to upload image: ' + uploadError.message);
                         return;
                     }
 
@@ -364,23 +365,23 @@
 
                     const avatarUrl = urlData.publicUrl;
 
-                    // Update profiles table
+                    // Upsert profile row so first-time uploads also work
                     const { error: updateError } = await supabaseClient
                         .from('profiles')
-                        .update({ 
+                        .upsert({
+                            id: user.id,
                             avatar_url: avatarUrl,
                             updated_at: new Date().toISOString()
-                        })
-                        .eq('id', user.id);
+                        }, { onConflict: 'id' });
 
                     if (updateError) {
                         console.error('Profile update error:', updateError);
-                        alert('Failed to update profile');
+                        alert('Failed to save profile photo: ' + updateError.message);
                         return;
                     }
 
                     // Update UI
-                    profileImage.src = avatarUrl;
+                    profileImage.src = `${avatarUrl}?t=${Date.now()}`;
                     alert('Profile picture updated successfully!');
 
                 } catch (error) {
