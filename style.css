@@ -121,6 +121,27 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.3);
 }
 
+.navbar .nav-link.btn-primary,
+.navbar .nav-link.btn-secondary {
+    border: 3px solid var(--bg-light);
+}
+
+.navbar .index-nav-btn {
+    min-width: 112px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    border: 3px solid var(--bg-light);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+.navbar .index-nav-btn:not(.btn-primary):hover {
+    background-color: var(--accent-blue);
+}
+
 /* Buttons */
 .btn-primary, .btn-secondary {
     padding: 1rem 2rem;
