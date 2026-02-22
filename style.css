@@ -1539,25 +1539,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Notifications Styles */
-.notifications-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.notifications-header .btn-secondary {
-    padding: 0.5rem 1.25rem;
-    font-size: 0.75rem;
-}
-
-.notifications-header .btn-secondary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
 .notifications-list {
     display: flex;
     flex-direction: column;
