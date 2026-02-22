@@ -438,18 +438,31 @@
                 return;
             }
 
-            const rangeStart = new Date(`${poll.start_date}T00:00:00`);
-            const rangeEnd = new Date(`${poll.end_date}T23:59:59`);
+            // Handle potentially swapped dates
+            const date1 = new Date(`${poll.start_date}T00:00:00`);
+            const date2 = new Date(`${poll.end_date}T23:59:59`);
+            const rangeStart = date1 < date2 ? date1 : date2;
+            const rangeEnd = date1 < date2 ? date2 : date1;
 
+            // Get all availability for this group and filter in JavaScript
             const { data: availability, error } = await supabaseClient
                 .from('availability')
                 .select('user_id, start_time, end_time')
-                .eq('group_id', poll.group_id)
-                .gte('start_time', rangeStart.toISOString())
-                .lte('start_time', rangeEnd.toISOString());
+                .eq('group_id', poll.group_id);
 
-            if (error || !availability || availability.length === 0) {
-                suggestionsList.innerHTML = '<p class="empty-state">No availability to compare yet.</p>';
+            if (error) {
+                suggestionsList.innerHTML = '<p class="empty-state">Error loading availability.</p>';
+                return;
+            }
+
+            // Filter to only slots that fall within the poll date range
+            const filteredAvailability = availability?.filter(slot => {
+                const slotStart = new Date(slot.start_time);
+                return slotStart >= rangeStart && slotStart <= rangeEnd;
+            }) || [];
+
+            if (filteredAvailability.length === 0) {
+                suggestionsList.innerHTML = '<p class="empty-state">No availability in this date range yet.</p>';
                 return;
             }
 
@@ -457,7 +470,7 @@
             const events = await getCalendarEvents();
             const grouped = {};
 
-            availability.forEach(slot => {
+            filteredAvailability.forEach(slot => {
                 const key = `${slot.start_time}|${slot.end_time}`;
                 if (!grouped[key]) {
                     grouped[key] = { count: 0, start: slot.start_time, end: slot.end_time, users: new Set() };
