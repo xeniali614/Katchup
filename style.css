@@ -541,8 +541,8 @@ h1, h2, h3, h4, h5, h6 {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    background-color: var(--accent-blue);
-    box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
+    background-color: #F8F2E5;
+    box-shadow: 0 0 0 4px rgba(248, 242, 229, 0.45);
 }
 
 .form-group select {
@@ -700,8 +700,8 @@ h1, h2, h3, h4, h5, h6 {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    background-color: var(--accent-blue);
-    box-shadow: 0 0 0 4px rgba(202, 63, 63, 0.2);
+    background-color: #F8F2E5;
+    box-shadow: 0 0 0 4px rgba(248, 242, 229, 0.45);
 }
 
 .form-group textarea::placeholder {
