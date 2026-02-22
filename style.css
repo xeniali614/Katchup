@@ -85,6 +85,15 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 2px;
 }
 
+.navbar-brand .title-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.navbar-brand .logo-link {
+    display: inline-flex;
+}
+
 .navbar-menu {
     display: flex;
     gap: 2rem;
@@ -1537,9 +1546,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .alert.warning {
-    background-color: var(--accent-red);
-    border-left-color: var(--primary-color);
-    color: var(--bg-light);
+    background-color: #fff3cd;
+    border-left-color: #ffc107;
+    color: #856404;
 }
 
 .alert.warning p {
