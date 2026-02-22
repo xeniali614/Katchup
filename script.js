@@ -21,10 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { createClient } = window.supabase;
                 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
                 await supabaseClient.auth.signOut();
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
             }
         });
     }
