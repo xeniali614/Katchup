@@ -1646,6 +1646,63 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
 }
 
+#uploadStatusAlert.warning {
+    background-color: var(--accent-red);
+    border-left-color: var(--primary-color);
+    color: var(--bg-light);
+    border: 3px solid var(--border-color);
+    border-radius: 0;
+    box-shadow: 4px 4px 0px rgba(48, 54, 74, 0.2);
+    position: relative;
+    padding-right: 2.75rem;
+}
+
+#uploadStatusAlert .upload-status-dismiss {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    background-color: var(--accent-blue);
+    color: var(--bg-light);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 2px 2px 0px rgba(48, 54, 74, 0.2);
+}
+
+#uploadStatusAlert .upload-status-dismiss:hover {
+    background-color: var(--accent-red);
+}
+
+#uploadStatusAlert .upload-status-dismiss:disabled {
+    background-color: var(--accent-blue);
+    color: var(--bg-light);
+    opacity: 1;
+    cursor: default;
+}
+
+#uploadStatusAlert .upload-status-title {
+    margin: 0 0 8px 0;
+    padding: 0 0 6px 0;
+    border-bottom: 2px solid var(--border-color);
+    font-family: 'ByteBounce', 'Courier New', 'Trebuchet MS', monospace;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text-dark);
+}
+
+#uploadStatusAlert.warning #uploadStatusMessage {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
 .alert.poll-gate-alert {
     background-color: var(--accent-red);
     border-left-color: var(--primary-color);

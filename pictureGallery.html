@@ -48,6 +48,8 @@
             </div>
 
             <div id="uploadStatusAlert" class="alert" style="display: none;">
+                <button type="button" class="upload-status-dismiss" aria-label="Dismiss upload status warning" disabled>...</button>
+                <p id="uploadStatusTitle" class="upload-status-title">availability.exe</p>
                 <p id="uploadStatusMessage"></p>
             </div>
 
@@ -86,8 +88,16 @@
         const lightboxDate = document.getElementById('lightboxDate');
         const lightboxCaption = document.getElementById('lightboxCaption');
         const lightboxClose = document.getElementById('lightboxClose');
+        const uploadStatusAlert = document.getElementById('uploadStatusAlert');
+        const uploadStatusDismiss = uploadStatusAlert ? uploadStatusAlert.querySelector('.upload-status-dismiss') : null;
 
         let groupNameById = {};
+
+        if (uploadStatusDismiss) {
+            uploadStatusDismiss.addEventListener('click', () => {
+                uploadStatusAlert.style.display = 'none';
+            });
+        }
 
         async function getUnlockedGroupIds(userId) {
             const { data, error } = await supabaseClient
