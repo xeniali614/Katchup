@@ -206,9 +206,15 @@
                     return;
                 }
 
-                const savedProfilePicture = localStorage.getItem('profilePicture');
-                if (savedProfilePicture) {
-                    profileImage.src = savedProfilePicture;
+                // Load profile picture from Supabase
+                const { data: profile } = await supabaseClient
+                    .from('profiles')
+                    .select('avatar_url')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile?.avatar_url) {
+                    profileImage.src = profile.avatar_url;
                 }
 
                 console.log('Current user:', user.id);
@@ -309,17 +315,82 @@
         });
 
         // Handle file input change
-        fileInput.addEventListener('change', function(event) {
+        fileInput.addEventListener('change', async function(event) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imageData = e.target.result;
-                    profileImage.src = imageData;
-                    // Save to localStorage
-                    localStorage.setItem('profilePicture', imageData);
-                };
-                reader.readAsDataURL(file);
+                // Validate file size (max 5MB)
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert('File size must be less than 5MB');
+                    return;
+                }
+
+                try {
+                    // Get current user
+                    const { data: { user } } = await supabaseClient.auth.getUser();
+                    if (!user) {
+                        alert('Please log in first');
+                        return;
+                    }
+
+                    // Show loading state
+                    changePictureBtn.textContent = 'Uploading...';
+                    changePictureBtn.disabled = true;
+
+                    // Upload to Supabase Storage
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${user.id}.${fileExt}`;
+                    const filePath = `avatars/${fileName}`;
+
+                    const { error: uploadError } = await supabaseClient
+                        .storage
+                        .from('profile')
+                        .upload(filePath, file, { 
+                            cacheControl: '3600',
+                            upsert: true 
+                        });
+
+                    if (uploadError) {
+                        console.error('Upload error:', uploadError);
+                        alert('Failed to upload image');
+                        return;
+                    }
+
+                    // Get public URL
+                    const { data: urlData } = supabaseClient
+                        .storage
+                        .from('profile')
+                        .getPublicUrl(filePath);
+
+                    const avatarUrl = urlData.publicUrl;
+
+                    // Update profiles table
+                    const { error: updateError } = await supabaseClient
+                        .from('profiles')
+                        .update({ 
+                            avatar_url: avatarUrl,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', user.id);
+
+                    if (updateError) {
+                        console.error('Profile update error:', updateError);
+                        alert('Failed to update profile');
+                        return;
+                    }
+
+                    // Update UI
+                    profileImage.src = avatarUrl;
+                    alert('Profile picture updated successfully!');
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating profile picture');
+                } finally {
+                    // Reset button state
+                    changePictureBtn.textContent = 'Change Picture';
+                    changePictureBtn.disabled = false;
+                }
             } else {
                 alert('Please select a valid image file.');
             }
