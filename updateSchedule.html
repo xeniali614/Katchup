@@ -201,6 +201,19 @@
             return `${dayIndex}-${hour}`;
         }
 
+        let isDragging = false;
+        let dragMode = 'add';
+
+        function applySlotChange(dayIndex, hour) {
+            const key = slotKey(dayIndex, hour);
+            if (dragMode === 'add') {
+                selectedSlots.add(key);
+            } else {
+                selectedSlots.delete(key);
+            }
+            updateGridSelection();
+        }
+
         function buildAvailabilityGrid() {
             availabilityGrid.innerHTML = '';
             const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -228,14 +241,18 @@
                     cell.className = 'availability-cell availability-slot';
                     cell.dataset.day = dayIndex.toString();
                     cell.dataset.hour = hour.toString();
-                    cell.addEventListener('click', () => {
+                    cell.addEventListener('mousedown', (event) => {
+                        event.preventDefault();
+                        isDragging = true;
                         const key = slotKey(dayIndex, hour);
-                        if (selectedSlots.has(key)) {
-                            selectedSlots.delete(key);
-                        } else {
-                            selectedSlots.add(key);
+                        dragMode = selectedSlots.has(key) ? 'remove' : 'add';
+                        applySlotChange(dayIndex, hour);
+                    });
+                    cell.addEventListener('mouseenter', () => {
+                        if (!isDragging) {
+                            return;
                         }
-                        updateGridSelection();
+                        applySlotChange(dayIndex, hour);
                     });
                     availabilityGrid.appendChild(cell);
                 }
@@ -910,6 +927,12 @@
             await getCurrentUser();
             await loadGroups();
             setPollsLocked(true);
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            availabilityGrid.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
             if (pollIdFromUrl) {
                 const { data: poll, error } = await supabaseClient
                     .from('meet_polls')
