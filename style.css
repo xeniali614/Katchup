@@ -1648,6 +1648,27 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.6px;
 }
 
+.notification-action {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border: 3px solid var(--border-color);
+    background-color: var(--accent-blue);
+    color: var(--bg-light);
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 3px 3px 0px rgba(48, 54, 74, 0.2);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.1s ease;
+}
+
+.notification-action:hover {
+    background-color: var(--text-dark);
+    transform: translateY(-2px);
+    box-shadow: 5px 5px 0px rgba(48, 54, 74, 0.2);
+}
+
 .notifications-list .empty-state {
     margin: 0;
     padding: 0.9rem;

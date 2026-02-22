@@ -342,6 +342,7 @@
                     const title = `${normalizedUserName}.exe`;
                     let message = '';
                     let href = '';
+                    let actionLabel = '';
 
                     if (notif.type === 'photos_uploaded') {
                         message = `${userName} finished their weekly photo upload!`;
@@ -351,6 +352,7 @@
                         message = `${userName} created a poll: "${notif.letter_title || 'Poll'}"`;
                         if (notif.poll_id) {
                             href = `updateSchedule.html?pollId=${notif.poll_id}`;
+                            actionLabel = 'View Poll';
                         }
                     }
 
@@ -366,6 +368,7 @@
                             <p class="notification-title">${title}</p>
                             <button type="button" class="notification-dismiss" aria-label="Dismiss notification">×</button>
                             <p class="notification-message">${message}</p>
+                            ${actionLabel ? `<button type="button" class="notification-action" data-href="${href}">${actionLabel}</button>` : ''}
                             <p class="notification-time">${timestamp}</p>
                         </div>
                     `;
@@ -418,6 +421,12 @@
                         notificationsList.innerHTML = '<p class="empty-state">No new notifications</p>';
                     }
                 }
+                return;
+            }
+
+            const actionBtn = event.target.closest('.notification-action');
+            if (actionBtn && actionBtn.dataset.href) {
+                window.location.href = actionBtn.dataset.href;
                 return;
             }
 
