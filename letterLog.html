@@ -114,7 +114,7 @@
 
                 let query = supabaseClient
                     .from('letters')
-                    .select('id, title, content, created_at, group_id, user_id, groups(name)')
+                    .select('id, title, content, created_at, group_id, user_id, groups(name))')
                     .in('group_id', groupIds)
                     .order('created_at', { ascending: false });
 
@@ -135,6 +135,19 @@
                     return;
                 }
 
+                const userIds = [...new Set(letters.map(l => l.user_id))];
+                const { data: profiles } = await supabaseClient
+                    .from('profiles')
+                    .select('id, username')
+                    .in('id', userIds);
+                    
+                const usernameMap = {};
+                if(profiles){
+                    for(let profile of profiles){
+                        usernameMap[profile.id] = profile.username;
+                    }
+                }
+
                 let html = '';
                 for (let letter of letters) {
                     const dateText = new Date(letter.created_at).toLocaleDateString('en-US', {
@@ -143,7 +156,7 @@
                         day: 'numeric'
                     });
                     const groupName = letter.groups?.name || 'Unknown group';
-                    const authorName = letter.user_id ? `Member ${letter.user_id.slice(0, 8)}` : 'Unknown';
+                    const authorName = usernameMap[letter.user_id] || 'Unknown';
 
                     html += `
                         <div class="letter-card">
