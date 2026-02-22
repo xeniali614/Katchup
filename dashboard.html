@@ -363,8 +363,9 @@
                         minute: '2-digit'
                     });
 
+                    const isCardClickable = href && !actionLabel;
                     html += `
-                        <div class="notification-item${href ? ' is-clickable' : ''}" data-id="${notif.id}"${href ? ` data-href="${href}"` : ''}>
+                        <div class="notification-item${isCardClickable ? ' is-clickable' : ''}" data-id="${notif.id}"${isCardClickable ? ` data-href="${href}"` : ''}>
                             <p class="notification-title">${title}</p>
                             <button type="button" class="notification-dismiss" aria-label="Dismiss notification">×</button>
                             <p class="notification-message">${message}</p>
