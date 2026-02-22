@@ -1572,9 +1572,15 @@ h1, h2, h3, h4, h5, h6 {
 /* When-to-Meet styles */
 .meet-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
     gap: 2rem;
     margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+    .meet-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .meet-card {
