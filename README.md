@@ -1,5 +1,13 @@
 # Katchup
 
+## About the project
+
+Katchup is a group scheduling and memory-keeping app for friends and teams. It helps you coordinate polls for meeting times, share photos and letters, and stay in sync with Google Calendar.
+
+## Website
+
+https://xeniali614.github.io/Katchup/
+
 ## Local run (Google Calendar)
 
 1. In `backend/.env`, set Google + Supabase keys and keep these local URLs:
@@ -15,6 +23,7 @@
 2. Start backend:
    - `cd backend`
    - `npm install`
+3. Start in root folder:
    - `npm run backend`
 3. Open a new terminal
    - `npm run start`
