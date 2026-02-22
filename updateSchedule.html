@@ -274,6 +274,14 @@
                 : { startDate: endDate, endDate: startDate };
         }
 
+        function formatPollDate(dateValue, separator) {
+            const [year, month, day] = String(dateValue).split('-');
+            if (!year || !month || !day) {
+                return dateValue;
+            }
+            return `${month}${separator}${day}${separator}${year}`;
+        }
+
         function getMonday(date) {
             const copy = new Date(date);
             const day = copy.getDay();
@@ -494,11 +502,13 @@
                     pollsCache[poll.id] = poll;
                     const owner = poll.created_by === currentUser?.id ? 'You' : 'Member';
                     const normalized = normalizeDateOrder(poll.start_date, poll.end_date);
+                    const formattedStart = formatPollDate(normalized.startDate, '-');
+                    const formattedEnd = formatPollDate(normalized.endDate, '-');
                     return `
                         <div class="meet-slot">
                             <div>
                                 <strong>${poll.title}</strong><br>
-                                ${normalized.startDate} to ${normalized.endDate}
+                                ${formattedStart} to ${formattedEnd}
                             </div>
                             <span class="meet-badge">${owner}</span>
                         </div>
