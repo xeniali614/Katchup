@@ -290,7 +290,7 @@
     <!-- Add Event Modal -->
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" onclick="document.getElementById('eventModal').style.display='none'">&times;</span>
+            <span class="close" onclick="document.getElementById('eventModal').style.display='none'; document.getElementById('eventModal').classList.remove('show')">&times;</span>
             <h3 id="modalTitle">Add Event</h3>
             <form id="eventForm">
                 <div class="form-group">
@@ -648,7 +648,7 @@
 
             document.getElementById('modalTitle').textContent = 'Edit Event';
             eventForm.dataset.eventId = eventId;
-            eventModal.style.display = 'block';
+            eventModal.style.display = 'flex';
             closeEventDetail();
         }
 
@@ -687,7 +687,7 @@
             startTimeGroup.style.display = 'block';
             endTimeGroup.style.display = 'block';
             delete eventForm.dataset.eventId;
-            eventModal.style.display = 'block';
+            eventModal.style.display = 'flex';
         });
 
         eventForm.addEventListener('submit', async (e) => {
@@ -799,7 +799,7 @@
                 }
 
                 eventModal.style.display = 'none';
-                alert('Event created successfully!');
+                alert('Event saved successfully!');
                 loadEvents();
             } catch (error) {
                 console.error('Event submission error:', error);
