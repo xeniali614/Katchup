@@ -81,13 +81,19 @@
         const { createClient } = window.supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Smooth scrolling for navigation links
+        // Smooth scrolling for navigation links with navbar offset
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
+                const nav = document.querySelector('.navbar');
                 if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
+                    const navHeight = nav ? nav.offsetHeight : 0;
+                    const targetTop = target.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({
+                        top: Math.max(targetTop - navHeight - 10, 0),
+                        behavior: 'smooth'
+                    });
                 }
             });
         });
