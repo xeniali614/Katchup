@@ -229,6 +229,21 @@
 
         body.schedule-page .main-content {
             flex: 1;
+            padding-top: 4rem;
+        }
+
+        .schedule-actions {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            body.schedule-page .main-content {
+                padding-top: 2rem;
+            }
         }
 
         body.schedule-page .footer {
@@ -266,8 +281,11 @@
     </nav>
 
     <main class="container main-content">
-        <div class="schedule-header">
+        <div class="section-header">
             <h2>Schedule</h2>
+        </div>
+
+        <div class="schedule-actions">
             <button id="connectBtn" class="btn-primary">Connect Google Calendar</button>
             <button id="disconnectBtn" class="btn-secondary" style="display: none;">Disconnect Calendar</button>
         </div>
