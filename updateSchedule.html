@@ -170,6 +170,12 @@
             return date.toISOString().split('T')[0];
         }
 
+        function normalizeDateOrder(startDate, endDate) {
+            return startDate <= endDate
+                ? { startDate, endDate }
+                : { startDate: endDate, endDate: startDate };
+        }
+
         function getMonday(date) {
             const copy = new Date(date);
             const day = copy.getDay();
@@ -363,11 +369,12 @@
                 pollsList.innerHTML = polls.map(poll => {
                     pollsCache[poll.id] = poll;
                     const owner = poll.created_by === currentUser?.id ? 'You' : 'Member';
+                    const normalized = normalizeDateOrder(poll.start_date, poll.end_date);
                     return `
                         <div class="meet-slot">
                             <div>
                                 <strong>${poll.title}</strong><br>
-                                ${poll.start_date} to ${poll.end_date}
+                                ${normalized.startDate} to ${normalized.endDate}
                             </div>
                             <span class="meet-badge">${owner}</span>
                         </div>
@@ -586,6 +593,7 @@
             const startDate = document.getElementById('pollStart').value;
             const endDate = document.getElementById('pollEnd').value;
             const duration = parseInt(document.getElementById('pollDuration').value, 10);
+            const normalizedDates = normalizeDateOrder(startDate, endDate);
 
             if (!title || !startDate || !endDate || !duration) {
                 showMessage(pollMessage, 'Please fill out all poll fields.', 'error');
@@ -599,8 +607,8 @@
                         group_id: availabilityGroup.value,
                         created_by: currentUser.id,
                         title,
-                        start_date: startDate,
-                        end_date: endDate,
+                        start_date: normalizedDates.startDate,
+                        end_date: normalizedDates.endDate,
                         duration_minutes: duration
                     }
                 ]);
