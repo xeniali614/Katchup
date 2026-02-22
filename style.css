@@ -1717,12 +1717,20 @@ h1, h2, h3, h4, h5, h6 {
     flex: 1 1 140px;
 }
 
+#pollForm button[type="submit"] {
+    margin-top: 0.75rem;
+}
+
 .meet-actions {
     margin-top: 1rem;
     margin-bottom: 0.75rem;
 }
 
 .meet-list {
+    margin-top: 1rem;
+}
+
+#pollForm {
     margin-top: 1rem;
 }
 
