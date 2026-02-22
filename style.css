@@ -406,6 +406,7 @@ h1, h2, h3, h4, h5, h6 {
     height: 4px;
     background-color: var(--bg-light);
     transition: 0.3s;
+    transform-origin: center;
 }
 
 .hamburger-menu {
@@ -452,14 +453,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .hamburger-btn.active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 6px);
+    transform: translateY(9px) rotate(45deg);
 }
 
 .hamburger-btn.active span:nth-child(2) {
     opacity: 0;
 }
 .hamburger-btn.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(5px, -6px);
+    transform: translateY(-9px) rotate(-45deg);
 }
 
 /* Authentication Styles */
