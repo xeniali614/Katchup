@@ -381,6 +381,13 @@ h1, h2, h3, h4, h5, h6 {
         letter-spacing: 0.5px;
     }
 
+    .navbar .index-nav-btn {
+        min-width: 0;
+        padding: 0.5rem 0.6rem;
+        font-size: 0.78rem;
+        letter-spacing: 0.5px;
+    }
+
     .hero h2 {
         font-size: 2rem;
     }
@@ -420,9 +427,13 @@ h1, h2, h3, h4, h5, h6 {
         width: 100%;
     }
 
-    .nav-link {
+    .hamburger-menu .nav-link {
         width: 100%;
         text-align: center;
+    }
+
+    .navbar-menu > .nav-link {
+        width: auto;
     }
 
     .hero {
