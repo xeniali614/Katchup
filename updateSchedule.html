@@ -94,6 +94,10 @@
                         <option value="" disabled selected>Select a poll...</option>
                     </select>
                 </div>
+                <div id="pollOwnerActions" class="meet-actions" style="display: none;">
+                    <button id="unfinalizePollBtn" type="button" class="btn-secondary">Unfinalize</button>
+                    <button id="deletePollBtn" type="button" class="btn-secondary">Delete Poll</button>
+                </div>
                 <form id="pollForm" class="meet-form">
                     <div class="form-group">
                         <label for="pollTitle">Poll Title</label>
@@ -128,6 +132,19 @@
             </section>
         </div>
     </main>
+
+    <div id="confirmModal" class="modal" style="display: none;" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+            <button type="button" class="close" id="confirmModalClose" aria-label="Close">&times;</button>
+            <h3 id="confirmModalTitle">Confirm Action</h3>
+            <p id="confirmModalMessage">Are you sure?</p>
+            <div class="meet-actions" style="margin-top: 1rem;">
+                <button type="button" id="confirmModalCancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="confirmModalConfirm" class="btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
     <script>
         const { createClient } = window.supabase;
@@ -150,6 +167,15 @@
         const pollGate = document.getElementById('pollGate');
         const suggestBtn = document.getElementById('suggestBtn');
         const suggestionsList = document.getElementById('suggestionsList');
+        const pollOwnerActions = document.getElementById('pollOwnerActions');
+        const unfinalizePollBtn = document.getElementById('unfinalizePollBtn');
+        const deletePollBtn = document.getElementById('deletePollBtn');
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmModalClose = document.getElementById('confirmModalClose');
+        const confirmModalCancel = document.getElementById('confirmModalCancel');
+        const confirmModalConfirm = document.getElementById('confirmModalConfirm');
+        const confirmModalTitle = document.getElementById('confirmModalTitle');
+        const confirmModalMessage = document.getElementById('confirmModalMessage');
         const pollIdFromUrl = new URLSearchParams(window.location.search).get('pollId');
         const hasPollDeepLink = Boolean(pollIdFromUrl);
 
@@ -176,6 +202,52 @@
             el.style.display = 'none';
         }
 
+        function isMissingTableError(error) {
+            return error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message || ''));
+        }
+
+        function confirmAction({ title, message, confirmLabel = 'Confirm' }) {
+            return new Promise((resolve) => {
+                confirmModalTitle.textContent = title;
+                confirmModalMessage.textContent = message;
+                confirmModalConfirm.textContent = confirmLabel;
+                confirmModal.style.display = 'flex';
+                confirmModal.classList.add('show');
+                confirmModal.setAttribute('aria-hidden', 'false');
+
+                const cleanup = () => {
+                    confirmModal.style.display = 'none';
+                    confirmModal.classList.remove('show');
+                    confirmModal.setAttribute('aria-hidden', 'true');
+                    confirmModalConfirm.removeEventListener('click', onConfirm);
+                    confirmModalCancel.removeEventListener('click', onCancel);
+                    confirmModalClose.removeEventListener('click', onCancel);
+                    confirmModal.removeEventListener('click', onBackdropClick);
+                };
+
+                const onConfirm = () => {
+                    cleanup();
+                    resolve(true);
+                };
+
+                const onCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const onBackdropClick = (event) => {
+                    if (event.target === confirmModal) {
+                        onCancel();
+                    }
+                };
+
+                confirmModalConfirm.addEventListener('click', onConfirm);
+                confirmModalCancel.addEventListener('click', onCancel);
+                confirmModalClose.addEventListener('click', onCancel);
+                confirmModal.addEventListener('click', onBackdropClick);
+            });
+        }
+
         function toIsoDate(date) {
             return date.toISOString().split('T')[0];
         }
@@ -189,7 +261,7 @@
         function getMonday(date) {
             const copy = new Date(date);
             const day = copy.getDay();
-            const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+            const diff = copy.getDate() - day;
             copy.setDate(diff);
             copy.setHours(0, 0, 0, 0);
             return copy;
@@ -224,18 +296,20 @@
 
         function buildAvailabilityGrid() {
             availabilityGrid.innerHTML = '';
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const { weekStart } = getWeekRange();
 
             const corner = document.createElement('div');
             corner.className = 'availability-cell availability-corner';
             availabilityGrid.appendChild(corner);
 
-            days.forEach(day => {
+            for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                const headerDate = new Date(weekStart);
+                headerDate.setDate(weekStart.getDate() + dayIndex);
                 const header = document.createElement('div');
                 header.className = 'availability-cell availability-day';
-                header.textContent = day;
+                header.textContent = `${headerDate.getMonth() + 1}/${headerDate.getDate()}`;
                 availabilityGrid.appendChild(header);
-            });
+            }
 
             for (let hour = 0; hour < 24; hour += 1) {
                 const label = document.createElement('div');
@@ -501,6 +575,99 @@
             return data;
         }
 
+        async function refreshPollOwnerActions() {
+            const pollId = pollSelect.value;
+            const poll = pollsCache[pollId];
+
+            if (!pollId || !poll || poll.created_by !== currentUser?.id) {
+                pollOwnerActions.style.display = 'none';
+                return;
+            }
+
+            const finalRow = await getPollFinal(pollId);
+            unfinalizePollBtn.disabled = !finalRow;
+            pollOwnerActions.style.display = 'flex';
+        }
+
+        async function storePollCalendarEvents(pollId, rows) {
+            if (!rows || rows.length === 0) {
+                return { stored: 0, skipped: false };
+            }
+
+            const payload = rows.map(row => ({
+                poll_id: pollId,
+                user_id: row.userId,
+                calendar_event_id: row.eventId,
+                start_time: row.startIso,
+                end_time: row.endIso,
+                created_at: new Date().toISOString()
+            }));
+
+            const { error } = await supabaseClient
+                .from('meet_poll_calendar_events')
+                .insert(payload);
+
+            if (error) {
+                if (isMissingTableError(error)) {
+                    console.warn('Missing meet_poll_calendar_events table; skipping event ID tracking.');
+                    return { stored: 0, skipped: true };
+                }
+                throw error;
+            }
+
+            return { stored: payload.length, skipped: false };
+        }
+
+        async function removeCalendarEventsForPoll(pollId) {
+            const { data: trackedEvents, error: trackedError } = await supabaseClient
+                .from('meet_poll_calendar_events')
+                .select('id, user_id, calendar_event_id')
+                .eq('poll_id', pollId);
+
+            if (trackedError) {
+                if (isMissingTableError(trackedError)) {
+                    return { removed: 0, failed: 0, tracked: false };
+                }
+                throw trackedError;
+            }
+
+            if (!trackedEvents || trackedEvents.length === 0) {
+                return { removed: 0, failed: 0, tracked: true };
+            }
+
+            let removed = 0;
+            let failed = 0;
+
+            await Promise.all(trackedEvents.map(async row => {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/calendar/events/${encodeURIComponent(row.calendar_event_id)}?userId=${encodeURIComponent(row.user_id)}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        removed += 1;
+                    } else {
+                        failed += 1;
+                    }
+                } catch {
+                    failed += 1;
+                }
+            }));
+
+            const { error: trackedDeleteError } = await supabaseClient
+                .from('meet_poll_calendar_events')
+                .delete()
+                .eq('poll_id', pollId);
+
+            if (trackedDeleteError && !isMissingTableError(trackedDeleteError)) {
+                showMessage(pollMessage, `Failed to clean tracked calendar events: ${trackedDeleteError.message}`, 'error');
+                return;
+            }
+
+            return { removed, failed, tracked: true };
+        }
+
         async function optIntoSlot(pollId, startIso, endIso) {
             if (!currentUser) {
                 showMessage(pollMessage, 'Please log in to vote.', 'error');
@@ -596,15 +763,25 @@
                 .eq('end_time', endIso);
 
             const userIds = (votes || []).map(row => row.user_id);
-            await createCalendarEventsForUsers(userIds, poll, startIso, endIso);
+            const eventRows = await createCalendarEventsForUsers(userIds, poll, startIso, endIso);
+
+            try {
+                await storePollCalendarEvents(pollId, eventRows);
+            } catch (error) {
+                showMessage(pollMessage, `Poll finalized, but failed to store calendar event tracking: ${error.message}`, 'error');
+                await suggestTimes();
+                await refreshPollOwnerActions();
+                return;
+            }
 
             showMessage(pollMessage, 'Poll finalized and calendars updated!', 'success');
             await suggestTimes();
+            await refreshPollOwnerActions();
         }
 
         async function createCalendarEventsForUsers(userIds, poll, startIso, endIso) {
             if (!userIds || userIds.length === 0) {
-                return;
+                return [];
             }
 
             const timeZone = 'UTC';
@@ -615,7 +792,7 @@
                 end: { dateTime: endIso, timeZone }
             };
 
-            await Promise.all(userIds.map(async userId => {
+            const createdEvents = await Promise.all(userIds.map(async userId => {
                 try {
                     const response = await fetch(`${BACKEND_URL}/calendar/events`, {
                         method: 'POST',
@@ -626,11 +803,145 @@
 
                     if (!response.ok) {
                         console.warn('Calendar event failed for user', userId);
+                        return null;
                     }
+
+                    const data = await response.json();
+                    const eventId = data?.event?.id;
+                    if (!eventId) {
+                        return null;
+                    }
+
+                    return {
+                        userId,
+                        eventId,
+                        startIso,
+                        endIso
+                    };
                 } catch (error) {
                     console.warn('Calendar event error for user', userId, error);
+                    return null;
                 }
             }));
+
+            return createdEvents.filter(Boolean);
+        }
+
+        async function unfinalizePoll(pollId) {
+            if (!currentUser) {
+                showMessage(pollMessage, 'Please log in to unfinalize.', 'error');
+                return;
+            }
+
+            const poll = pollsCache[pollId];
+            if (!poll || poll.created_by !== currentUser.id) {
+                showMessage(pollMessage, 'Only the poll creator can unfinalize.', 'error');
+                return;
+            }
+
+            const finalRow = await getPollFinal(pollId);
+            if (!finalRow) {
+                showMessage(pollMessage, 'This poll is not finalized.', 'error');
+                return;
+            }
+
+            const confirmed = await confirmAction({
+                title: 'Unfinalize Poll?',
+                message: 'This will remove the finalized state and attempt to delete calendar events for members who opted in.',
+                confirmLabel: 'Unfinalize'
+            });
+
+            if (!confirmed) {
+                return;
+            }
+
+            const cleanup = await removeCalendarEventsForPoll(pollId);
+
+            const { error: deleteFinalError } = await supabaseClient
+                .from('meet_poll_finals')
+                .delete()
+                .eq('poll_id', pollId);
+
+            if (deleteFinalError) {
+                showMessage(pollMessage, `Failed to unfinalize poll: ${deleteFinalError.message}`, 'error');
+                return;
+            }
+
+            if (!cleanup.tracked) {
+                showMessage(pollMessage, 'Poll unfinalized. Calendar cleanup skipped because tracking table is missing.', 'success');
+            } else if (cleanup.failed > 0) {
+                showMessage(pollMessage, `Poll unfinalized. Removed ${cleanup.removed} calendar events, ${cleanup.failed} failed.`, 'success');
+            } else {
+                showMessage(pollMessage, `Poll unfinalized and removed ${cleanup.removed} calendar events.`, 'success');
+            }
+
+            await suggestTimes();
+            await refreshPollOwnerActions();
+        }
+
+        async function deletePoll(pollId) {
+            if (!currentUser) {
+                showMessage(pollMessage, 'Please log in to delete polls.', 'error');
+                return;
+            }
+
+            const poll = pollsCache[pollId];
+            if (!poll || poll.created_by !== currentUser.id) {
+                showMessage(pollMessage, 'Only the poll creator can delete this poll.', 'error');
+                return;
+            }
+
+            const confirmed = await confirmAction({
+                title: 'Delete Poll?',
+                message: 'This will permanently delete the poll, votes, finalization, and tracked calendar events.',
+                confirmLabel: 'Delete Poll'
+            });
+
+            if (!confirmed) {
+                return;
+            }
+
+            const finalRow = await getPollFinal(pollId);
+            if (finalRow) {
+                await unfinalizePoll(pollId);
+            }
+
+            await supabaseClient
+                .from('meet_poll_votes')
+                .delete()
+                .eq('poll_id', pollId);
+
+            await supabaseClient
+                .from('meet_poll_finals')
+                .delete()
+                .eq('poll_id', pollId);
+
+            await supabaseClient
+                .from('meet_poll_calendar_events')
+                .delete()
+                .eq('poll_id', pollId);
+
+            await supabaseClient
+                .from('notifications')
+                .delete()
+                .eq('poll_id', pollId);
+
+            const { error: deletePollError } = await supabaseClient
+                .from('meet_polls')
+                .delete()
+                .eq('id', pollId)
+                .eq('created_by', currentUser.id);
+
+            if (deletePollError) {
+                showMessage(pollMessage, `Failed to delete poll: ${deletePollError.message}`, 'error');
+                return;
+            }
+
+            showMessage(pollMessage, 'Poll deleted.', 'success');
+            pollSelect.value = '';
+            suggestionsList.innerHTML = '<p class="empty-state">Select a poll to see suggestions.</p>';
+            await loadPolls(availabilityGroup.value);
+            await refreshPollOwnerActions();
         }
 
         async function getGroupMemberCount(groupId) {
@@ -911,6 +1222,27 @@
             }
         });
 
+        pollSelect.addEventListener('change', async () => {
+            await refreshPollOwnerActions();
+            await suggestTimes();
+        });
+
+        unfinalizePollBtn.addEventListener('click', async () => {
+            if (!pollSelect.value) {
+                showMessage(pollMessage, 'Select a poll first.', 'error');
+                return;
+            }
+            await unfinalizePoll(pollSelect.value);
+        });
+
+        deletePollBtn.addEventListener('click', async () => {
+            if (!pollSelect.value) {
+                showMessage(pollMessage, 'Select a poll first.', 'error');
+                return;
+            }
+            await deletePoll(pollSelect.value);
+        });
+
         availabilityGroup.addEventListener('change', async () => {
             clearMessage(availabilityMessage);
             await checkAvailabilityGate();
@@ -918,7 +1250,10 @@
             await loadPolls(availabilityGroup.value);
         });
 
-        availabilityWeek.addEventListener('change', loadAvailabilityForWeek);
+        availabilityWeek.addEventListener('change', async () => {
+            buildAvailabilityGrid();
+            await loadAvailabilityForWeek();
+        });
 
         clearAvailabilityBtn.addEventListener('click', () => {
             selectedSlots = new Set();
@@ -929,8 +1264,7 @@
         suggestBtn.addEventListener('click', suggestTimes);
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const { weekStart } = getWeekRange();
-            availabilityWeek.value = toIsoDate(weekStart);
+            availabilityWeek.value = toIsoDate(new Date());
             buildAvailabilityGrid();
             await getCurrentUser();
             await loadGroups();
@@ -955,6 +1289,7 @@
                     await loadPolls(poll.group_id);
                     pollSelect.value = poll.id;
                     pollsCache[poll.id] = poll;
+                    await refreshPollOwnerActions();
                     await suggestTimes();
                     pollsList.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
