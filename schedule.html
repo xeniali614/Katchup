@@ -291,19 +291,25 @@
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="document.getElementById('eventModal').style.display='none'">&times;</span>
-            <h3>Add Event</h3>
+            <h3 id="modalTitle">Add Event</h3>
             <form id="eventForm">
                 <div class="form-group">
                     <label for="eventTitle">Event Title</label>
                     <input type="text" id="eventTitle" required>
                 </div>
                 <div class="form-group">
-                    <label for="eventStart">Start Time</label>
+                    <label>
+                        <input type="checkbox" id="allDayCheckbox"> All Day Event
+                    </label>
+                </div>
+                <div class="form-group" id="startTimeGroup">
+                    <label for="eventStart">Start Date & Time</label>
                     <input type="datetime-local" id="eventStart" required>
                 </div>
-                <div class="form-group">
-                    <label for="eventEnd">End Time</label>
+                <div class="form-group" id="endTimeGroup">
+                    <label for="eventEnd">End Date & Time</label>
                     <input type="datetime-local" id="eventEnd" required>
+                    <small style="display: block; color: #666; margin-top: 5px;">Dates don't have to match - event will span multiple days</small>
                 </div>
                 <div class="form-group">
                     <label for="eventDescription">Description (optional)</label>
@@ -336,6 +342,28 @@
         const eventModal = document.getElementById('eventModal');
         const eventForm = document.getElementById('eventForm');
         const eventDetail = document.getElementById('eventDetail');
+        const allDayCheckbox = document.getElementById('allDayCheckbox');
+        const eventStartInput = document.getElementById('eventStart');
+        const eventEndInput = document.getElementById('eventEnd');
+        const startTimeGroup = document.getElementById('startTimeGroup');
+        const endTimeGroup = document.getElementById('endTimeGroup');
+
+        // Handle all-day event checkbox toggle
+        allDayCheckbox.addEventListener('change', () => {
+            if (allDayCheckbox.checked) {
+                // Hide time inputs for all-day events
+                startTimeGroup.style.display = 'none';
+                endTimeGroup.style.display = 'none';
+                eventStartInput.removeAttribute('required');
+                eventEndInput.removeAttribute('required');
+            } else {
+                // Show time inputs for timed events
+                startTimeGroup.style.display = 'block';
+                endTimeGroup.style.display = 'block';
+                eventStartInput.setAttribute('required', 'required');
+                eventEndInput.setAttribute('required', 'required');
+            }
+        });
 
         // Initialize Supabase after the library loads
         var scheduleSupabaseClient = null;
@@ -478,10 +506,24 @@
             dayNum.textContent = day;
             cell.appendChild(dayNum);
 
-            // Get events for this day
+            // Get events for this day (including multi-day events)
             const dayEvents = allEvents.filter(event => {
-                const eventDate = new Date(event.start.dateTime || event.start.date);
-                return eventDate.toDateString() === dateObj.toDateString();
+                const eventStart = new Date(event.start.dateTime || event.start.date);
+                const eventEnd = new Date(event.end.dateTime || event.end.date);
+                
+                // Normalize dates to midnight for comparison (ignore time portion)
+                const cellDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+                const startDate = new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate());
+                const endDate = new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
+                
+                // For all-day events, Google Calendar uses exclusive end dates
+                // So we need to subtract 1 day from the end date for comparison
+                if (!event.start.dateTime) {
+                    endDate.setDate(endDate.getDate() - 1);
+                }
+                
+                // Check if this day falls within the event's date range
+                return cellDate >= startDate && cellDate <= endDate;
             });
 
             if (dayEvents.length > 0) {
@@ -531,14 +573,23 @@
                 content.innerHTML = '<p style="text-align: center; color: #9aa0a6;">No events</p>';
             } else {
                 dayEvents.forEach(event => {
+                    const isAllDay = !event.start.dateTime;
                     const start = new Date(event.start.dateTime || event.start.date);
                     const end = new Date(event.end.dateTime || event.end.date);
 
                     const eventEl = document.createElement('div');
                     eventEl.className = 'event-list-item';
+                    
+                    let timeDisplay = '';
+                    if (isAllDay) {
+                        timeDisplay = '<p style="font-weight: bold; color: #CA3F3F;">All Day</p>';
+                    } else {
+                        timeDisplay = `<p>${start.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</p>`;
+                    }
+                    
                     eventEl.innerHTML = `
                         <h4>${event.summary}</h4>
-                        <p>${start.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}</p>
+                        ${timeDisplay}
                         ${event.description ? `<p>${event.description}</p>` : ''}
                         <div class="event-actions">
                             <button onclick="editEvent('${event.id}')">Edit</button>
@@ -560,14 +611,42 @@
             const event = allEvents.find(e => e.id === eventId);
             if (!event) return;
 
-            const start = new Date(event.start.dateTime || event.start.date);
-            const end = new Date(event.end.dateTime || event.end.date);
+            const isAllDay = !event.start.dateTime;
+            let startStr = event.start.dateTime || event.start.date;
+            let endStr = event.end.dateTime || event.end.date;
+
+            let startDisplay = startStr;
+            let endDisplay = endStr;
+
+            // For all-day events, Google Calendar stores exclusive end dates
+            // So subtract 1 day from the end date to show the correct "last day"
+            if (isAllDay) {
+                const endDate = new Date(endStr + 'T00:00:00');
+                endDate.setDate(endDate.getDate() - 1);
+                endDisplay = endDate.toISOString().split('T')[0];
+            } else {
+                // For timed events, use just the datetime part (without timezone)
+                // Format: "YYYY-MM-DDTHH:mm:00" -> "YYYY-MM-DDTHH:mm"
+                startDisplay = startStr.slice(0, 16);
+                endDisplay = endStr.slice(0, 16);
+            }
 
             document.getElementById('eventTitle').value = event.summary;
-            document.getElementById('eventStart').value = start.toISOString().slice(0, 16);
-            document.getElementById('eventEnd').value = end.toISOString().slice(0, 16);
+            document.getElementById('eventStart').value = startDisplay;
+            document.getElementById('eventEnd').value = endDisplay;
             document.getElementById('eventDescription').value = event.description || '';
+            document.getElementById('allDayCheckbox').checked = isAllDay;
+            
+            // Show/hide time inputs based on event type
+            if (isAllDay) {
+                startTimeGroup.style.display = 'none';
+                endTimeGroup.style.display = 'none';
+            } else {
+                startTimeGroup.style.display = 'block';
+                endTimeGroup.style.display = 'block';
+            }
 
+            document.getElementById('modalTitle').textContent = 'Edit Event';
             eventForm.dataset.eventId = eventId;
             eventModal.style.display = 'block';
             closeEventDetail();
@@ -598,10 +677,15 @@
         });
 
         addEventBtn.addEventListener('click', () => {
+            document.getElementById('modalTitle').textContent = 'Add Event';
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventStart').value = '';
             document.getElementById('eventEnd').value = '';
             document.getElementById('eventDescription').value = '';
+            document.getElementById('allDayCheckbox').checked = false;
+            // Show time inputs since all-day is unchecked
+            startTimeGroup.style.display = 'block';
+            endTimeGroup.style.display = 'block';
             delete eventForm.dataset.eventId;
             eventModal.style.display = 'block';
         });
@@ -609,30 +693,117 @@
         eventForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const isAllDay = document.getElementById('allDayCheckbox').checked;
+            const eventTitle = document.getElementById('eventTitle').value;
+            
+            if (!eventTitle) {
+                alert('Event title is required');
+                return;
+            }
+
+            let start, end;
+
+            if (isAllDay) {
+                // For all-day events, use today and tomorrow if times aren't filled
+                const startVal = document.getElementById('eventStart').value;
+                const endVal = document.getElementById('eventEnd').value;
+                
+                if (startVal) {
+                    start = new Date(startVal);
+                } else {
+                    start = new Date();
+                }
+                
+                if (endVal) {
+                    end = new Date(endVal);
+                } else {
+                    // Default end date is same day for all-day events
+                    end = new Date(start);
+                }
+                
+                // Ensure end is after start
+                if (end < start) {
+                    end = new Date(start);
+                }
+            } else {
+                const startVal = document.getElementById('eventStart').value;
+                const endVal = document.getElementById('eventEnd').value;
+                
+                if (!startVal || !endVal) {
+                    alert('Start and end times are required for timed events');
+                    return;
+                }
+                
+                // Convert datetime-local to ISO 8601 format (without timezone in the string)
+                // The timeZone property will be added separately
+                start = startVal.includes(':') ? startVal + ':00' : startVal;
+                end = endVal.includes(':') ? endVal + ':00' : endVal;
+            }
+
             const eventData = {
                 userId: currentUserId,
-                summary: document.getElementById('eventTitle').value,
-                start: { dateTime: new Date(document.getElementById('eventStart').value).toISOString() },
-                end: { dateTime: new Date(document.getElementById('eventEnd').value).toISOString() },
+                summary: eventTitle,
                 description: document.getElementById('eventDescription').value
             };
+
+            if (isAllDay) {
+                // For all-day events, extract just the date part
+                const startDate = typeof start === 'string' ? start.split('T')[0] : start.toISOString().split('T')[0];
+                const endDate = typeof end === 'string' ? end.split('T')[0] : end.toISOString().split('T')[0];
+                
+                eventData.start = { date: startDate };
+                // Google Calendar expects exclusive end dates for all-day events
+                // So increment the end date by 1 day
+                const endDateObj = new Date(endDate + 'T00:00:00');
+                endDateObj.setDate(endDateObj.getDate() + 1);
+                eventData.end = { date: endDateObj.toISOString().split('T')[0] };
+            } else {
+                // For timed events, use both dateTime and timeZone
+                // Google Calendar API v3 requires them as separate fields
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                eventData.start = { 
+                    dateTime: start,
+                    timeZone: timeZone
+                };
+                eventData.end = { 
+                    dateTime: end,
+                    timeZone: timeZone
+                };
+            }
 
             try {
                 const eventId = eventForm.dataset.eventId;
                 const method = eventId ? 'PATCH' : 'POST';
                 const url = eventId ? `${BACKEND_URL}/calendar/events/${eventId}` : `${BACKEND_URL}/calendar/events`;
 
-                await fetch(url, {
+                console.log('Sending event data:', JSON.stringify(eventData, null, 2));
+                
+                const response = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(eventData),
                     credentials: 'include'
                 });
 
+                const result = await response.json();
+                console.log('Event response:', result);
+                
+                if (!response.ok) {
+                    console.error('Event save error:', result);
+                    if (result.error === 'Not connected to Google Calendar.') {
+                        alert('Please connect to Google Calendar first by clicking "Connect Google Calendar" button.');
+                    } else {
+                        alert('Failed to save event: ' + (result.error || 'Unknown error'));
+                    }
+                    return;
+                }
+
                 eventModal.style.display = 'none';
+                alert('Event created successfully!');
                 loadEvents();
             } catch (error) {
-                alert('Failed to save');
+                console.error('Event submission error:', error);
+                alert('Failed to save event: ' + error.message);
             }
         });
 
