@@ -327,6 +327,8 @@
                 let html = '';
                 for (let notif of notifications) {
                     const userName = usernameMap[notif.user_id] || 'A friend';
+                    const normalizedUserName = userName.toLowerCase().trim().replace(/\s+/g, '_');
+                    const title = `${normalizedUserName}.exe`;
                     let message = '';
                     let href = '';
 
@@ -348,21 +350,14 @@
                         minute: '2-digit'
                     });
 
-                    if (href) {
-                        html += `
-                            <a class="notification-item" href="${href}">
-                                <p class="notification-message">${message}</p>
-                                <p class="notification-time">${timestamp}</p>
-                            </a>
-                        `;
-                    } else {
-                        html += `
-                            <div class="notification-item">
-                                <p class="notification-message">${message}</p>
-                                <p class="notification-time">${timestamp}</p>
-                            </div>
-                        `;
-                    }
+                    html += `
+                        <div class="notification-item${href ? ' is-clickable' : ''}"${href ? ` data-href="${href}"` : ''}>
+                            <p class="notification-title">${title}</p>
+                            <button type="button" class="notification-dismiss" aria-label="Dismiss notification">×</button>
+                            <p class="notification-message">${message}</p>
+                            <p class="notification-time">${timestamp}</p>
+                        </div>
+                    `;
                 }
 
                 notificationsList.innerHTML = html;
@@ -371,6 +366,25 @@
                 notificationsList.innerHTML = '<p class="empty-state">Error loading notifications: ' + error.message + '</p>';
             }
         }
+
+        notificationsList.addEventListener('click', function(event) {
+            const dismissBtn = event.target.closest('.notification-dismiss');
+            if (dismissBtn) {
+                const card = dismissBtn.closest('.notification-item');
+                if (card) {
+                    card.remove();
+                    if (!notificationsList.querySelector('.notification-item')) {
+                        notificationsList.innerHTML = '<p class="empty-state">No new notifications</p>';
+                    }
+                }
+                return;
+            }
+
+            const card = event.target.closest('.notification-item.is-clickable');
+            if (card && card.dataset.href) {
+                window.location.href = card.dataset.href;
+            }
+        });
 
         // Profile picture functionality
         const changePictureBtn = document.getElementById('changePictureBtn');
