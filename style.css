@@ -693,6 +693,26 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
 }
 
+.find-time .section-header p {
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 720px;
+}
+
+.find-time .section-header ul {
+    margin: 0.75rem auto 0;
+    padding-left: 1.25rem;
+    max-width: 720px;
+    text-align: left;
+    font-size: 1rem;
+    line-height: 1.7;
+    font-weight: 700;
+}
+
+.find-time .section-header li {
+    margin-bottom: 0.4rem;
+}
+
 .upload-form-container {
     background-color: var(--accent-blue);
     border: 6px solid var(--border-color);
